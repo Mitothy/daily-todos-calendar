@@ -1,0 +1,40 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { sessionConfig } from './config/session.js';
+import authRoutes from './routes/auth.routes.js';
+import tasksRoutes from './routes/tasks.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
+import { errorHandler } from './middleware/errorHandler.js';
+
+const app = express();
+const PORT = process.env.PORT || 5002;
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  credentials: true,
+}));
+app.use(express.json());
+app.use(sessionConfig);
+
+// Routes
+app.use('/auth', authRoutes);
+app.use('/tasks', tasksRoutes);
+app.use('/calendar', calendarRoutes);
+
+// Health check
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Error handler
+app.use(errorHandler);
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+export default app;

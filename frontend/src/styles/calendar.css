@@ -1,0 +1,22 @@
+.rbc-month-view .rbc-day-bg {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.rbc-month-view .rbc-day-bg:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.rbc-today {
+  background-color: #e3f2fd !important;
+  border: 2px solid #2196f3 !important;
+}
+
+.rbc-event {
+  font-size: 0.875rem;
+  padding: 2px 5px;
+}
+
+.rbc-event.rbc-selected {
+  background-color: inherit;
+}
