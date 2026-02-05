@@ -5,9 +5,21 @@ export interface Task {
   completedAt: string | null;
 }
 
+export interface Expense {
+  id: string;
+  description: string;
+  amount: number;
+}
+
 export interface TasksData {
   tasks: Task[];
   completionRate: number;
+  lastUpdated: string;
+}
+
+export interface ExpensesData {
+  expenses: Expense[];
+  totalSpent: number;
   lastUpdated: string;
 }
 
@@ -17,4 +29,6 @@ export interface DailyTaskEvent {
   completionRate: number;
   colorId: string;
   eventId: string;
+  expenses: Expense[];
+  totalSpent: number;
 }

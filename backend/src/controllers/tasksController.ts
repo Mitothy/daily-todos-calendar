@@ -1,15 +1,15 @@
 import { Request, Response } from 'express';
 import { createOrUpdateTaskEvent, getTasksForDate } from '../services/googleCalendarService.js';
-import { createEmptyTasks, toggleTask, validateTasks } from '../services/taskService.js';
+import { createEmptyTasks, toggleTask, validateTasks, validateExpenses, calculateTotalSpent } from '../services/taskService.js';
 import { getColorId } from '../utils/colorMapper.js';
-import { Task } from '../types/task.types.js';
+import { Task, Expense } from '../types/task.types.js';
 
 export async function getTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
     console.log(`[getTasks] Loading tasks for date: ${date}`);
-    const result = await getTasksForDate(req.auth!, date);
-    console.log(`[getTasks] Result for ${date}:`, result ? `found ${result.tasks.length} tasks` : 'null (no event found)');
+    const result = await getTasksForDate(req.auth!, date, req.session.userId!);
+    console.log(`[getTasks] Result for ${date}:`, result ? `found ${result.tasks.length} tasks, ${result.expenses.length} expenses` : 'null (no event found)');
     res.json(result);
   } catch (error: any) {
     console.error('Get tasks error:', error.message);
@@ -20,20 +20,26 @@ export async function getTasks(req: Request, res: Response) {
 export async function createTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
-    let { tasks } = req.body as { tasks: Task[] };
+    let { tasks, expenses } = req.body as { tasks: Task[]; expenses?: Expense[] };
     console.log(`[createTasks] Creating tasks for date: ${date}, incoming tasks: ${tasks?.length || 0}`);
 
     if (!tasks || tasks.length === 0) {
       tasks = createEmptyTasks();
       console.log(`[createTasks] Generated 6 empty tasks`);
     }
+    if (!expenses) expenses = [];
 
     const validationError = validateTasks(tasks);
     if (validationError) {
       return res.status(400).json({ error: validationError });
     }
 
-    const eventId = await createOrUpdateTaskEvent(req.auth!, date, tasks);
+    const expenseError = validateExpenses(expenses);
+    if (expenseError) {
+      return res.status(400).json({ error: expenseError });
+    }
+
+    const eventId = await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses);
     const completedCount = tasks.filter((t) => t.completed).length;
 
     res.status(201).json({
@@ -41,6 +47,8 @@ export async function createTasks(req: Request, res: Response) {
       tasks,
       completionRate: (completedCount / 6) * 100,
       colorId: getColorId(completedCount),
+      expenses,
+      totalSpent: calculateTotalSpent(expenses),
     });
   } catch (error: any) {
     console.error('Create tasks error:', error.message);
@@ -51,7 +59,7 @@ export async function createTasks(req: Request, res: Response) {
 export async function toggleTaskCompletion(req: Request, res: Response) {
   try {
     const { date, taskId } = req.params;
-    const existing = await getTasksForDate(req.auth!, date);
+    const existing = await getTasksForDate(req.auth!, date, req.session.userId!);
 
     if (!existing) {
       return res.status(404).json({ error: 'No tasks found for this date' });
@@ -63,7 +71,7 @@ export async function toggleTaskCompletion(req: Request, res: Response) {
     }
 
     existing.tasks[taskIndex] = toggleTask(existing.tasks[taskIndex]);
-    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks);
+    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses);
 
     const completedCount = existing.tasks.filter((t) => t.completed).length;
 
@@ -87,7 +95,7 @@ export async function updateTaskTitle(req: Request, res: Response) {
       return res.status(400).json({ error: 'Invalid title' });
     }
 
-    const existing = await getTasksForDate(req.auth!, date);
+    const existing = await getTasksForDate(req.auth!, date, req.session.userId!);
     if (!existing) {
       return res.status(404).json({ error: 'No tasks found for this date' });
     }
@@ -98,7 +106,7 @@ export async function updateTaskTitle(req: Request, res: Response) {
     }
 
     existing.tasks[taskIndex].title = title;
-    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks);
+    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses);
 
     res.json({ task: existing.tasks[taskIndex] });
   } catch (error: any) {
@@ -110,20 +118,27 @@ export async function updateTaskTitle(req: Request, res: Response) {
 export async function bulkUpdateTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
-    const { tasks } = req.body as { tasks: Task[] };
+    const { tasks, expenses = [] } = req.body as { tasks: Task[]; expenses?: Expense[] };
 
     const validationError = validateTasks(tasks);
     if (validationError) {
       return res.status(400).json({ error: validationError });
     }
 
-    await createOrUpdateTaskEvent(req.auth!, date, tasks);
+    const expenseError = validateExpenses(expenses);
+    if (expenseError) {
+      return res.status(400).json({ error: expenseError });
+    }
+
+    await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses);
     const completedCount = tasks.filter((t) => t.completed).length;
 
     res.json({
       tasks,
       completionRate: (completedCount / 6) * 100,
       colorId: getColorId(completedCount),
+      expenses,
+      totalSpent: calculateTotalSpent(expenses),
     });
   } catch (error: any) {
     console.error('Bulk update error:', error.message);

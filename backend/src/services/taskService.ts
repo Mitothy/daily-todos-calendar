@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Task } from '../types/task.types.js';
+import { Task, Expense } from '../types/task.types.js';
 
 export function createEmptyTasks(): Task[] {
   return Array.from({ length: 6 }, () => ({
@@ -27,4 +27,21 @@ export function validateTasks(tasks: Task[]): string | null {
     if (typeof task.completed !== 'boolean') return 'Each task must have a boolean completed field';
   }
   return null;
+}
+
+export function validateExpenses(expenses: Expense[]): string | null {
+  if (!Array.isArray(expenses)) return 'Expenses must be an array';
+  for (const expense of expenses) {
+    if (!expense.id) return 'Each expense must have an id';
+    if (typeof expense.description !== 'string') return 'Each expense description must be a string';
+    if (expense.description.length > 200) return 'Expense description must be 200 characters or less';
+    if (typeof expense.amount !== 'number' || isNaN(expense.amount)) return 'Each expense must have a numeric amount';
+    if (expense.amount < 0) return 'Expense amount cannot be negative';
+  }
+  return null;
+}
+
+export function calculateTotalSpent(expenses: Expense[]): number {
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  return Math.round(total * 100) / 100;
 }

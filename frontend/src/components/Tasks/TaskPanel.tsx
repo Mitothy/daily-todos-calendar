@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import { TaskList } from './TaskList';
+import { ExpenseList } from '../Expenses/ExpenseList';
 import { ErrorMessage } from '../Common/ErrorMessage';
 import { formatDisplayDate } from '../../utils/dateHelpers';
 import { HEX_COLORS } from '../../utils/colorMap';
-import { Task } from '../../types/task.types';
+import { Task, Expense } from '../../types/task.types';
 
 interface TaskPanelProps {
   date: Date;
@@ -15,6 +16,7 @@ interface TaskPanelProps {
 export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   const { loadTasks, saveTasks, createTasks, error } = useTasks();
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
+  const [localExpenses, setLocalExpenses] = useState<Expense[]>([]);
   const [saving, setSaving] = useState(false);
   const [panelLoading, setPanelLoading] = useState(true);
 
@@ -30,12 +32,14 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
 
       if (result && result.tasks.length > 0) {
         setLocalTasks(result.tasks);
+        setLocalExpenses(result.expenses || []);
       } else {
         // First time opening this day - create the default event
         const created = await createTasks(date, []);
         if (cancelled) return;
         if (created) {
           setLocalTasks(created.tasks);
+          setLocalExpenses(created.expenses || []);
         }
       }
       setPanelLoading(false);
@@ -69,9 +73,36 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
     );
   }, []);
 
+  const handleAddExpense = useCallback(() => {
+    setLocalExpenses((prev) => [
+      ...prev,
+      { id: crypto.randomUUID(), description: '', amount: 0 },
+    ]);
+  }, []);
+
+  const handleDeleteExpense = useCallback((id: string) => {
+    setLocalExpenses((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  const handleExpenseDescriptionChange = useCallback((id: string, description: string) => {
+    setLocalExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, description } : e))
+    );
+  }, []);
+
+  const handleExpenseAmountChange = useCallback((id: string, amount: number) => {
+    setLocalExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, amount } : e))
+    );
+  }, []);
+
   const handleSave = async () => {
     setSaving(true);
-    await saveTasks(date, localTasks);
+    // Clean up empty expense rows and round amounts before saving
+    const cleanedExpenses = localExpenses
+      .filter((e) => e.description.trim() || e.amount > 0)
+      .map((e) => ({ ...e, amount: Math.round(e.amount * 100) / 100 }));
+    await saveTasks(date, localTasks, cleanedExpenses);
     setSaving(false);
     onClose();
   };
@@ -99,7 +130,7 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4">
+        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
           {panelLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -111,6 +142,13 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
                 tasks={localTasks}
                 onToggle={handleToggle}
                 onTitleChange={handleTitleChange}
+              />
+              <ExpenseList
+                expenses={localExpenses}
+                onDescriptionChange={handleExpenseDescriptionChange}
+                onAmountChange={handleExpenseAmountChange}
+                onDelete={handleDeleteExpense}
+                onAdd={handleAddExpense}
               />
             </>
           )}

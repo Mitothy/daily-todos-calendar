@@ -1,7 +1,8 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { Task, TasksData, DailyTaskEvent } from '../types/task.types.js';
+import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData } from '../types/task.types.js';
 import { getColorId } from '../utils/colorMapper.js';
+import { getCachedEventId, setCachedEventId } from './eventCache.js';
 
 // Get the next day string for date range queries
 function getNextDay(date: string): string {
@@ -17,12 +18,31 @@ function getPrevDay(date: string): string {
   return d.toISOString().split('T')[0];
 }
 
-// Find existing task event for a date using date-only boundaries
-// Google Calendar all-day events need a wider search window to account
-// for timezone offsets between UTC and the calendar's local timezone.
-async function findExistingEvent(calendar: any, date: string) {
-  // Use a padded window: start one day before, end one day after
-  // to ensure we catch the all-day event regardless of timezone offset.
+// Find existing task event for a date.
+// If knownEventId is provided (from cache), use strongly-consistent events.get()
+// instead of eventually-consistent events.list().
+async function findExistingEvent(calendar: any, date: string, knownEventId?: string) {
+  // Try cached eventId first (strongly consistent lookup)
+  if (knownEventId) {
+    try {
+      const response = await calendar.events.get({
+        calendarId: 'primary',
+        eventId: knownEventId,
+      });
+      const event = response.data;
+      if (event && event.extendedProperties?.private?.appId === 'dailyTasksTracker') {
+        const eventDate = event.start?.date || event.start?.dateTime?.split('T')[0];
+        if (eventDate === date) {
+          console.log(`[findExistingEvent] cache hit: found event ${knownEventId} for date=${date}`);
+          return event;
+        }
+      }
+    } catch (err: any) {
+      console.log(`[findExistingEvent] cached eventId ${knownEventId} not found (${err.message}), falling back to search`);
+    }
+  }
+
+  // Fall back to list search with padded window for timezone safety
   const prevDay = getPrevDay(date);
   const dayAfterNext = getNextDay(getNextDay(date));
   const response = await calendar.events.list({
@@ -33,7 +53,6 @@ async function findExistingEvent(calendar: any, date: string) {
     maxResults: 10,
   });
 
-  // Filter to the exact date since we widened the search window
   const items = response.data.items || [];
   const match = items.find((item: any) => {
     const eventDate = item.start?.date || item.start?.dateTime?.split('T')[0];
@@ -47,7 +66,9 @@ async function findExistingEvent(calendar: any, date: string) {
 export async function createOrUpdateTaskEvent(
   auth: OAuth2Client,
   date: string,
-  tasks: Task[]
+  tasks: Task[],
+  userId: string,
+  expenses: Expense[] = []
 ): Promise<string> {
   const calendar = google.calendar({ version: 'v3', auth });
 
@@ -64,22 +85,32 @@ export async function createOrUpdateTaskEvent(
     lastUpdated: new Date().toISOString(),
   };
 
+  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const expensesData: ExpensesData = {
+    expenses,
+    totalSpent: Math.round(totalSpent * 100) / 100,
+    lastUpdated: new Date().toISOString(),
+  };
+
   const eventBody = {
     summary: `Daily Tasks: ${completedCount}/6`,
     colorId,
     extendedProperties: {
       private: {
         appId: 'dailyTasksTracker',
-        version: '1.0',
+        version: '1.1',
         tasksData: JSON.stringify(tasksData),
+        expensesData: JSON.stringify(expensesData),
       },
     },
   };
 
-  const existing = await findExistingEvent(calendar, date);
+  const cachedId = getCachedEventId(userId, date);
+  const existing = await findExistingEvent(calendar, date, cachedId ?? undefined);
 
   if (existing) {
     console.log(`[createOrUpdate] PATCHING existing event ${existing.id} for date ${date}`);
+    setCachedEventId(userId, date, existing.id!);
     await calendar.events.patch({
       calendarId: 'primary',
       eventId: existing.id!,
@@ -96,21 +127,27 @@ export async function createOrUpdateTaskEvent(
         end: { date },
       },
     });
-    return response.data.id!;
+    const newEventId = response.data.id!;
+    setCachedEventId(userId, date, newEventId);
+    return newEventId;
   }
 }
 
 export async function getTasksForDate(
   auth: OAuth2Client,
-  date: string
+  date: string,
+  userId: string
 ): Promise<DailyTaskEvent | null> {
   const calendar = google.calendar({ version: 'v3', auth });
 
-  const event = await findExistingEvent(calendar, date);
+  const cachedId = getCachedEventId(userId, date);
+  const event = await findExistingEvent(calendar, date, cachedId ?? undefined);
 
   if (!event) {
     return null;
   }
+
+  setCachedEventId(userId, date, event.id!);
 
   const tasksDataStr = event.extendedProperties?.private?.tasksData;
 
@@ -121,12 +158,24 @@ export async function getTasksForDate(
   const tasksData: TasksData = JSON.parse(tasksDataStr);
   const completedCount = tasksData.tasks.filter((t) => t.completed).length;
 
+  // Parse expenses (backward compatible with events created before expenses existed)
+  const expensesDataStr = event.extendedProperties?.private?.expensesData;
+  let expenses: Expense[] = [];
+  let totalSpent = 0;
+  if (expensesDataStr) {
+    const parsed: ExpensesData = JSON.parse(expensesDataStr);
+    expenses = parsed.expenses;
+    totalSpent = parsed.totalSpent;
+  }
+
   return {
     date,
     tasks: tasksData.tasks,
     completionRate: tasksData.completionRate,
     colorId: event.colorId || getColorId(completedCount),
     eventId: event.id!,
+    expenses,
+    totalSpent,
   };
 }
 
