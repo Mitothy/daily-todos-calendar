@@ -7,7 +7,9 @@ import { Task } from '../types/task.types.js';
 export async function getTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
+    console.log(`[getTasks] Loading tasks for date: ${date}`);
     const result = await getTasksForDate(req.auth!, date);
+    console.log(`[getTasks] Result for ${date}:`, result ? `found ${result.tasks.length} tasks` : 'null (no event found)');
     res.json(result);
   } catch (error: any) {
     console.error('Get tasks error:', error.message);
@@ -19,9 +21,11 @@ export async function createTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
     let { tasks } = req.body as { tasks: Task[] };
+    console.log(`[createTasks] Creating tasks for date: ${date}, incoming tasks: ${tasks?.length || 0}`);
 
     if (!tasks || tasks.length === 0) {
       tasks = createEmptyTasks();
+      console.log(`[createTasks] Generated 6 empty tasks`);
     }
 
     const validationError = validateTasks(tasks);

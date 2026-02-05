@@ -3,6 +3,47 @@ import { OAuth2Client } from 'google-auth-library';
 import { Task, TasksData, DailyTaskEvent } from '../types/task.types.js';
 import { getColorId } from '../utils/colorMapper.js';
 
+// Get the next day string for date range queries
+function getNextDay(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
+// Get the previous day string
+function getPrevDay(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().split('T')[0];
+}
+
+// Find existing task event for a date using date-only boundaries
+// Google Calendar all-day events need a wider search window to account
+// for timezone offsets between UTC and the calendar's local timezone.
+async function findExistingEvent(calendar: any, date: string) {
+  // Use a padded window: start one day before, end one day after
+  // to ensure we catch the all-day event regardless of timezone offset.
+  const prevDay = getPrevDay(date);
+  const dayAfterNext = getNextDay(getNextDay(date));
+  const response = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin: `${prevDay}T00:00:00Z`,
+    timeMax: `${dayAfterNext}T00:00:00Z`,
+    privateExtendedProperty: 'appId=dailyTasksTracker',
+    maxResults: 10,
+  });
+
+  // Filter to the exact date since we widened the search window
+  const items = response.data.items || [];
+  const match = items.find((item: any) => {
+    const eventDate = item.start?.date || item.start?.dateTime?.split('T')[0];
+    return eventDate === date;
+  });
+
+  console.log(`[findExistingEvent] date=${date}, found ${items.length} items in window, exact match: ${!!match}`);
+  return match || null;
+}
+
 export async function createOrUpdateTaskEvent(
   auth: OAuth2Client,
   date: string,
@@ -35,23 +76,18 @@ export async function createOrUpdateTaskEvent(
     },
   };
 
-  const existing = await calendar.events.list({
-    calendarId: 'primary',
-    timeMin: new Date(`${date}T00:00:00Z`).toISOString(),
-    timeMax: new Date(`${date}T23:59:59Z`).toISOString(),
-    privateExtendedProperty: 'appId=dailyTasksTracker',
-    maxResults: 1,
-  });
+  const existing = await findExistingEvent(calendar, date);
 
-  if (existing.data.items && existing.data.items.length > 0) {
-    const eventId = existing.data.items[0].id!;
+  if (existing) {
+    console.log(`[createOrUpdate] PATCHING existing event ${existing.id} for date ${date}`);
     await calendar.events.patch({
       calendarId: 'primary',
-      eventId,
+      eventId: existing.id!,
       requestBody: eventBody,
     });
-    return eventId;
+    return existing.id!;
   } else {
+    console.log(`[createOrUpdate] INSERTING new event for date ${date}`);
     const response = await calendar.events.insert({
       calendarId: 'primary',
       requestBody: {
@@ -70,19 +106,12 @@ export async function getTasksForDate(
 ): Promise<DailyTaskEvent | null> {
   const calendar = google.calendar({ version: 'v3', auth });
 
-  const response = await calendar.events.list({
-    calendarId: 'primary',
-    timeMin: new Date(`${date}T00:00:00Z`).toISOString(),
-    timeMax: new Date(`${date}T23:59:59Z`).toISOString(),
-    privateExtendedProperty: 'appId=dailyTasksTracker',
-    maxResults: 1,
-  });
+  const event = await findExistingEvent(calendar, date);
 
-  if (!response.data.items || response.data.items.length === 0) {
+  if (!event) {
     return null;
   }
 
-  const event = response.data.items[0];
   const tasksDataStr = event.extendedProperties?.private?.tasksData;
 
   if (!tasksDataStr) {

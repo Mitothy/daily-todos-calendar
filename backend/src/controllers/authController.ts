@@ -9,10 +9,6 @@ export async function googleAuth(req: Request, res: Response) {
       return res.status(400).json({ error: 'Authorization code is required' });
     }
 
-    // Debug: log what we're sending to Google
-    console.log('DEBUG - GOOGLE_CLIENT_ID:', process.env.GOOGLE_CLIENT_ID);
-    console.log('DEBUG - GOOGLE_REDIRECT_URI:', process.env.GOOGLE_REDIRECT_URI);
-
     const oauth2Client = createOAuth2Client();
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
@@ -30,9 +26,16 @@ export async function googleAuth(req: Request, res: Response) {
     };
     req.session.userId = userInfo.data.id || '';
 
-    res.json({
-      accessToken: tokens.access_token,
-      user: req.session.user,
+    // Explicitly save session before responding to ensure cookie is set
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Session save failed' });
+      }
+      res.json({
+        accessToken: tokens.access_token,
+        user: req.session.user,
+      });
     });
   } catch (error: any) {
     console.error('Auth error:', error.message);

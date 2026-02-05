@@ -1,8 +1,14 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '..', '.env'), override: true });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { sessionConfig } from './config/session.js';
+import { createSessionConfig } from './config/session.js';
 import authRoutes from './routes/auth.routes.js';
 import tasksRoutes from './routes/tasks.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
@@ -20,7 +26,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
-app.use(sessionConfig);
+app.use(createSessionConfig());
 
 // Routes
 app.use('/auth', authRoutes);

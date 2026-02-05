@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 import { useTasks } from '../../hooks/useTasks';
 import { TaskList } from './TaskList';
 import { ErrorMessage } from '../Common/ErrorMessage';
@@ -13,40 +12,38 @@ interface TaskPanelProps {
   onClose: () => void;
 }
 
-function createEmptyTasks(): Task[] {
-  return Array.from({ length: 6 }, () => ({
-    id: uuidv4(),
-    title: '',
-    completed: false,
-    completedAt: null,
-  }));
-}
-
 export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   const { loadTasks, saveTasks, createTasks, error } = useTasks();
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
-  const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [panelLoading, setPanelLoading] = useState(true);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    async function load() {
+    let cancelled = false;
+
+    async function loadOrCreate() {
       setPanelLoading(true);
       const result = await loadTasks(date);
+      if (cancelled) return;
+
       if (result && result.tasks.length > 0) {
         setLocalTasks(result.tasks);
-        setIsNew(false);
       } else {
-        setLocalTasks(createEmptyTasks());
-        setIsNew(true);
+        // First time opening this day - create the default event
+        const created = await createTasks(date, []);
+        if (cancelled) return;
+        if (created) {
+          setLocalTasks(created.tasks);
+        }
       }
       setPanelLoading(false);
     }
 
-    load();
-  }, [date, isOpen, loadTasks]);
+    loadOrCreate();
+    return () => { cancelled = true; };
+  }, [date, isOpen, loadTasks, createTasks]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -74,11 +71,7 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
 
   const handleSave = async () => {
     setSaving(true);
-    if (isNew) {
-      await createTasks(date, localTasks);
-    } else {
-      await saveTasks(date, localTasks);
-    }
+    await saveTasks(date, localTasks);
     setSaving(false);
     onClose();
   };
