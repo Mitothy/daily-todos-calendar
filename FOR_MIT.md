@@ -6,6 +6,8 @@ Imagine you have 6 things you want to get done every day. Maybe it's exercise, s
 
 That's this app. It's a full-stack web application that gives you exactly 6 task slots per day, syncs everything to your Google Calendar using a clever storage trick, and paints your calendar in a color gradient from gray (0/6) to green (6/6). Open Google Calendar on your phone and you can *see* your productivity at a glance — no extra app needed.
 
+**New in v1.4:** Daily expense tracking, dark mode, motivational sidebars, and detailed event descriptions that show up right in Google Calendar.
+
 ---
 
 ## The Technical Architecture (The Big Picture)
@@ -29,7 +31,7 @@ Think of it like writing notes in invisible ink on the back of a calendar event.
 - Data lives wherever your Google account lives
 - It survives even if our app disappears
 
-The trade-off? We're limited by Google's API rate limits and the size constraints of Extended Properties. For 6 tasks per day, this is more than enough.
+The trade-off? We're limited by Google's API rate limits and the size constraints of Extended Properties. For 6 tasks and a handful of expenses per day, this is more than enough.
 
 ---
 
@@ -45,7 +47,7 @@ backend/src/
 │   └── session.ts         ← Cookie/session configuration
 ├── controllers/           ← Handle HTTP requests
 │   ├── authController.ts  ← Login, logout, token refresh
-│   ├── tasksController.ts ← CRUD for daily tasks
+│   ├── tasksController.ts ← CRUD for daily tasks + expenses
 │   └── calendarController.ts ← Month overview data
 ├── middleware/
 │   ├── authMiddleware.ts  ← "Are you logged in?" check
@@ -54,7 +56,8 @@ backend/src/
 ├── routes/                ← URL → Controller mapping
 ├── services/
 │   ├── googleCalendarService.ts ← The Google API wrapper
-│   └── taskService.ts     ← Business logic (validation, creation)
+│   ├── taskService.ts     ← Business logic (validation, creation)
+│   └── eventCache.ts      ← File-based cache for event IDs (NEW!)
 ├── types/                 ← TypeScript interfaces
 └── utils/
     ├── colorMapper.ts     ← Completion count → Google color ID
@@ -72,16 +75,22 @@ This is a classic **layered architecture**. Each layer only knows about the laye
 frontend/src/
 ├── main.tsx / App.tsx     ← Entry point and routing
 ├── context/
-│   └── AuthContext.tsx    ← Global auth state
+│   ├── AuthContext.tsx    ← Global auth state
+│   └── ThemeContext.tsx   ← Dark/light mode state (NEW!)
 ├── components/
 │   ├── Auth/              ← Login/Logout/ProtectedRoute
-│   ├── Calendar/          ← CalendarView, ColorLegend
+│   ├── Calendar/          ← CalendarView, ColorLegend, DayEvent
 │   ├── Tasks/             ← TaskPanel, TaskList, TaskItem
-│   ├── Layout/            ← Header, LoadingSpinner
+│   ├── Expenses/          ← ExpenseList, ExpenseItem (NEW!)
+│   ├── Layout/            ← Header, ThemeToggle (NEW!)
+│   ├── Sidebar/           ← NonNegotiables, Goals, BibleVerse (NEW!)
 │   └── Common/            ← ErrorMessage, Toast
 ├── hooks/                 ← useTasks, useCalendar
 ├── services/
 │   └── api.ts             ← Axios instance with interceptors
+├── config/
+│   ├── nonNegotiables.ts  ← User's daily non-negotiable items
+│   └── goals.ts           ← User's goals list (NEW!)
 ├── types/                 ← Shared TypeScript interfaces
 ├── utils/                 ← Color maps, date formatters
 ├── pages/                 ← LoginPage, CalendarPage, NotFoundPage
@@ -90,15 +99,22 @@ frontend/src/
 
 **The component hierarchy:**
 ```
-App
+App (ThemeProvider wrapper)
 ├── LoginPage (if not authenticated)
 └── CalendarPage (if authenticated)
-    ├── Header (user info + logout)
+    ├── Header (user info + theme toggle + logout)
+    ├── Sidebar Left
+    │   ├── NonNegotiables (daily reminders)
+    │   └── Goals (long-term aspirations)
     ├── CalendarView (React Big Calendar)
     │   └── TaskPanel (modal, opens on date click)
-    │       └── TaskList
-    │           └── TaskItem × 6
-    └── ColorLegend (sidebar)
+    │       ├── TaskList
+    │       │   └── TaskItem × 6
+    │       └── ExpenseList (NEW!)
+    │           └── ExpenseItem × N
+    └── Sidebar Right
+        ├── ColorLegend (progress distribution)
+        └── BibleVerse (daily inspiration)
 ```
 
 ---
@@ -130,13 +146,16 @@ This is implemented in `api.ts` with Axios interceptors — think of them as mid
 
 When you click a date and save tasks:
 
-1. **TaskPanel** collects the 6 tasks (titles + completion states)
-2. Calls `PUT /tasks/2026-02-03` with the task array
-3. **Backend** validates (exactly 6 tasks, titles ≤ 100 chars)
-4. **googleCalendarService** searches for an existing event on that date with `privateExtendedProperty: 'appId=dailyTasksTracker'`
-5. If found → `events.patch()` (update). If not → `events.insert()` (create)
-6. The event's **colorId** is set based on completion count (0=gray, 6=green)
-7. Task data is JSON-stringified into the event's Extended Properties
+1. **TaskPanel** collects the 6 tasks (titles + completion states) and any expenses
+2. Calls `PUT /tasks/2026-02-03` with the task array and expenses array
+3. **Backend** validates (exactly 6 tasks, titles ≤ 100 chars, expenses have valid amounts)
+4. **googleCalendarService** checks the **event cache** first for the event ID
+5. If cached → uses strongly-consistent `events.get()`. If not → falls back to eventually-consistent `events.list()`
+6. If found → `events.patch()` (update). If not → `events.insert()` (create)
+7. The event's **colorId** is set based on completion count (0=gray, 6=green)
+8. Task data and expense data are JSON-stringified into the event's Extended Properties
+9. A human-readable description is generated showing tasks (with checkboxes) and expenses
+10. The event ID is cached to file for future requests
 
 The "search before create" pattern prevents duplicate events — a classic **upsert** operation.
 
@@ -149,7 +168,7 @@ The "search before create" pattern prevents duplicate events — a classic **ups
 | **TypeScript** (both sides) | Catches bugs before they run. When your task interface changes, TypeScript tells you every place that breaks. |
 | **React Big Calendar** | Battle-tested calendar component. Building a calendar from scratch is a month-long project full of edge cases (timezones, DST, leap years). |
 | **Express + express-session** | Simple, well-understood server framework. Sessions with HttpOnly cookies are more secure than JWT for this use case (we can revoke sessions server-side). |
-| **Tailwind CSS** | Utility-first CSS means you style components without leaving the JSX file. No more switching between `.tsx` and `.css` files. |
+| **Tailwind CSS** | Utility-first CSS means you style components without leaving the JSX file. Dark mode support via `dark:` prefix is trivial. |
 | **Vite** | Instant dev server startup. Webpack takes seconds; Vite takes milliseconds. It uses native ES modules during dev. |
 | **Extended Properties** | Zero-cost "database." Google handles storage, backup, and sync. Perfect for an MVP. |
 | **Axios over fetch** | Interceptors for automatic token refresh. Request/response transformation. Better error handling. |
@@ -209,20 +228,76 @@ const COLOR_MAP: Record<number, string> = {
 
 Google's color IDs don't follow a logical sequence (8, 11, 4, 6, 5, 2, 10). A junior developer might try to derive a formula. A senior developer uses a lookup table. It's explicit, debuggable, and won't break if Google changes their internal numbering.
 
-### 6. Potential Pitfalls
+### 6. Google Calendar's Eventual Consistency Problem (THE BIG BUG)
+
+This was the most frustrating bug we encountered, and understanding it teaches a crucial lesson about distributed systems.
+
+**The Problem:** After saving tasks, the calendar view wouldn't update. The data was in Google Calendar (we could see it!), but our app showed 0/6. Sometimes it worked, sometimes it didn't. Classic "works on my machine" energy.
+
+**The Root Cause:** Google Calendar's `events.list()` API is **eventually consistent**. When you insert an event, it might take seconds (or longer) before a list query finds it. It's like mailing a letter — just because you dropped it in the mailbox doesn't mean it's at the destination yet.
+
+But `events.get()` with a specific event ID is **strongly consistent** — it always returns the current state immediately.
+
+**The Solution:** We implemented a **file-based event cache** (`eventCache.ts`):
+1. After creating/finding an event, cache `userId → date → eventId` to a JSON file
+2. On subsequent requests, check the cache first
+3. If cached, use `events.get(eventId)` — strongly consistent, immediate
+4. If not cached, fall back to `events.list()` — eventually consistent, might miss recent changes
+5. The cache persists to disk, surviving server restarts
+
+```typescript
+// The key insight: list() is eventually consistent, get() is strongly consistent
+const cachedId = getCachedEventId(userId, date);
+if (cachedId) {
+  // Strongly consistent — always current
+  const event = await calendar.events.get({ eventId: cachedId });
+} else {
+  // Eventually consistent — might be stale
+  const events = await calendar.events.list({ ... });
+}
+```
+
+**Why This Matters:** This is a microcosm of distributed systems design. Any time you're working with cloud APIs, databases with replicas, or caching layers, you'll encounter eventual consistency. The solution is always the same: **cache what you can verify, fall back to search when you can't**.
+
+### 7. Google Profile Pictures Need `referrerPolicy`
+
+A small but annoying bug: user profile pictures from Google wouldn't load. The fix? Add `referrerPolicy="no-referrer"` to the `<img>` tag. Google's CDN blocks requests that include a referrer header from unknown origins. This is a security measure on their end, but it means we need to strip the referrer.
+
+```tsx
+<img
+  src={user.picture}
+  referrerPolicy="no-referrer"  // Without this, Google blocks the request
+/>
+```
+
+### 8. Dark Mode with Tailwind Is Trivial
+
+Adding dark mode used to require CSS variables, theme providers, and careful color management. With Tailwind's `dark:` variant, it's just:
+
+```tsx
+<div className="bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+```
+
+The `ThemeContext` manages a single boolean. The `class="dark"` on the `<html>` element triggers all `dark:` variants. That's it. The lesson: choose tools that make hard things easy.
+
+### 9. Potential Pitfalls
 
 - **Forgetting `withCredentials: true`** on the Axios instance means cookies don't get sent cross-origin, and your session silently fails. This is the #1 cause of "auth works in Postman but not in the browser."
 - **Extended Properties have size limits.** If task titles get very long, the JSON string could exceed Google's limit. The 100-character title cap prevents this.
 - **Google OAuth consent screen in "Testing" mode** only allows pre-registered test users. You must add your email in the Google Cloud Console.
 - **Rate limits.** Google Calendar API allows ~500 requests per 100 seconds. The month-view endpoint makes one API call per month, not one per day, to stay well within limits.
+- **`privateExtendedProperty` must be an array** in the Google Calendar API. Using a string silently fails or causes type errors. Always `['appId=dailyTasksTracker']`, never `'appId=dailyTasksTracker'`.
+- **Stale cache entries** after external deletion. If someone deletes an event directly in Google Calendar, our cache still has the old event ID. Solution: wrap `events.get()` in try/catch and clear the cache on 404/410 errors.
 
-### 7. How This Project Demonstrates Professional Patterns
+### 10. How This Project Demonstrates Professional Patterns
 
 - **Separation of concerns:** Routes → Controllers → Services → External APIs
 - **Type safety end-to-end:** The same `Task` interface exists in both frontend and backend
 - **Graceful degradation:** Loading spinners during API calls, error messages on failure, automatic token refresh on expiry
 - **Security by default:** Helmet headers, CORS restrictions, HttpOnly cookies, input validation
 - **Convention over configuration:** Predictable file naming, consistent code structure, standard REST endpoints
+- **Caching for consistency:** File-based event cache to work around API eventual consistency
+- **Human-readable data:** Event descriptions show tasks and expenses, useful when viewing in Google Calendar directly
 
 ---
 
@@ -233,7 +308,76 @@ Google's color IDs don't follow a logical sequence (8, 11, 4, 6, 5, 2, 10). A ju
 - **Task templates:** Pre-fill common daily tasks
 - **Redis session store:** Replace the in-memory MemoryStore for production (the current one doesn't scale and leaks memory)
 - **Deploy:** Frontend on Netlify (free), backend on Railway or Render
+- **Budget tracking:** Set monthly expense budgets and track progress
+- **Recurring expenses:** Mark expenses as recurring (rent, subscriptions)
 
 ---
 
-The beauty of this project is that it turns Google Calendar into a visual accountability system. You don't need to open our app to see your progress — just glance at your calendar and the colors tell the story.
+## The Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND (:3001)                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  │
+│  │ ThemeContext│  │ AuthContext │  │      CalendarPage       │  │
+│  │ (dark/light)│  │ (tokens)    │  │  ┌───────┐ ┌─────────┐ │  │
+│  └─────────────┘  └─────────────┘  │  │Sidebar│ │ Calendar│ │  │
+│                                     │  │ Left  │ │  View   │ │  │
+│  ┌─────────────────────────────────┤  └───────┘ └────┬────┘ │  │
+│  │         api.ts (Axios)          │                 │      │  │
+│  │  - Auto-attach tokens           │           ┌─────┴─────┐│  │
+│  │  - Auto-refresh on 401          │           │ TaskPanel ││  │
+│  │  - withCredentials: true        │           │ + Expenses││  │
+│  └───────────────┬─────────────────┤           └───────────┘│  │
+└──────────────────┼─────────────────────────────────────────────┘
+                   │ HTTP + Cookies
+                   ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                         BACKEND (:5002)                          │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                    Express Middleware                        ││
+│  │  Helmet → CORS → Session → JSON Parser → Routes             ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                              │                                   │
+│  ┌───────────────┬───────────┴───────────┬───────────────────┐  │
+│  │ /auth/*       │ /tasks/*              │ /calendar/*       │  │
+│  │ authController│ tasksController       │ calendarController│  │
+│  └───────┬───────┴───────────┬───────────┴─────────┬─────────┘  │
+│          │                   │                     │            │
+│  ┌───────┴───────────────────┴─────────────────────┴─────────┐  │
+│  │              googleCalendarService.ts                      │  │
+│  │  - findExistingEvent (cache-aware)                        │  │
+│  │  - createOrUpdateTaskEvent                                │  │
+│  │  - getMonthEvents (merges cached + listed)                │  │
+│  └───────────────────────────┬───────────────────────────────┘  │
+│                              │                                   │
+│  ┌───────────────────────────┴───────────────────────────────┐  │
+│  │                    eventCache.ts                           │  │
+│  │  - File-based: .event-cache.json                          │  │
+│  │  - userId → date → eventId mapping                        │  │
+│  │  - Survives server restarts                               │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────┬───────────────────────────────┘
+                                  │ Google Calendar API
+                                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     GOOGLE CALENDAR                              │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Event: "Daily Tasks: 4/6"                                   ││
+│  │ Color: Yellow (colorId: 5)                                  ││
+│  │ Description: 📋 TASKS                                        ││
+│  │              ✅ Exercise  ✅ Read  ⬜ Study ...              ││
+│  │              💰 EXPENSES                                     ││
+│  │              • Coffee: ₱150.00                              ││
+│  │ extendedProperties.private: {                               ││
+│  │   appId: "dailyTasksTracker",                               ││
+│  │   tasksData: "{...json...}",                                ││
+│  │   expensesData: "{...json...}"                              ││
+│  │ }                                                           ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+The beauty of this project is that it turns Google Calendar into a visual accountability system. You don't need to open our app to see your progress — just glance at your calendar and the colors tell the story. The expenses show up in the event description. Your phone's calendar widget becomes your productivity dashboard.
