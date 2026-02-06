@@ -3,6 +3,7 @@ export interface Task {
   title: string;
   completed: boolean;
   completedAt: string | null;
+  notes: string;
 }
 
 export interface Expense {
@@ -25,4 +26,23 @@ export interface DailyTaskEvent {
   eventId: string;
   expenses: Expense[];
   totalSpent: number;
+}
+
+export const DEFAULT_TASK_TITLES = [
+  'Daily Supplements',
+  'Skincare and Brush Twice',
+  'Notebook',
+  'Stretching',
+  'Exercise',
+  'Read or Mental Exercise',
+];
+
+export function createDefaultTasks(): Task[] {
+  return DEFAULT_TASK_TITLES.map((title) => ({
+    id: crypto.randomUUID(),
+    title,
+    completed: false,
+    completedAt: null,
+    notes: '',
+  }));
 }

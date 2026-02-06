@@ -1,3 +1,4 @@
+/* === Clickable day backgrounds === */
 .rbc-month-view .rbc-day-bg {
   cursor: pointer;
   transition: background-color 0.2s;
@@ -12,11 +13,149 @@
   border: 2px solid #2196f3 !important;
 }
 
-.rbc-event {
-  font-size: 0.875rem;
-  padding: 2px 5px;
+/* === Force events to fill the full cell height === */
+
+/*
+  DOM hierarchy in react-big-calendar month view:
+  .rbc-month-row  (flex column, flex:1 0 0)
+    .rbc-row-bg   (absolutely positioned background cells)
+    .rbc-row-content  (relative, holds date headers + event rows)
+      .rbc-row (date header row)
+      .rbc-row (event row)
+        .rbc-row-segment
+          .rbc-event
+            .rbc-event-content
+              <DayEvent/>
+
+  Goal: make .rbc-row-content stretch to fill the month-row,
+  then make the event row stretch to fill remaining space after headers.
+*/
+
+/* Month row: ensure enough height, allow overflow for our custom content */
+.rbc-month-view .rbc-month-row {
+  min-height: 100px;
+  overflow: visible !important;
 }
 
+/* row-content stretches to fill the month-row (month-row is flex-column) */
+.rbc-month-view .rbc-row-content {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+}
+
+/* Date header row: fixed height */
+.rbc-month-view .rbc-row-content > .rbc-row:first-child {
+  flex: 0 0 auto !important;
+}
+
+/* Event row: stretch to fill remaining space */
+.rbc-month-view .rbc-row-content > .rbc-row:last-child {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  align-items: stretch !important;
+}
+
+/* Each segment fills its share of the row width and stretches full height */
+.rbc-month-view .rbc-row-segment {
+  padding: 0 !important;
+  display: flex !important;
+  flex: 1 1 0% !important;
+}
+
+/* Event fills the entire segment */
+.rbc-month-view .rbc-event {
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  height: auto !important;
+  display: flex !important;
+  flex: 1 !important;
+}
+
+/* Event content wrapper fills the event */
+.rbc-month-view .rbc-event-content {
+  width: 100% !important;
+  height: auto !important;
+  display: flex !important;
+  flex: 1 !important;
+}
+
+/* Remove selection highlight */
 .rbc-event.rbc-selected {
-  background-color: inherit;
+  background-color: inherit !important;
+  box-shadow: none !important;
+}
+
+/* Remove default event wrapper styles (set via eventPropGetter) */
+.day-event-wrapper {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* === Two-row event filling the cell === */
+.day-event-fill {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex: 1;
+  margin: 2px;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.day-event-fill:hover {
+  opacity: 0.85;
+}
+
+/* Top row: task completion with color — takes ~60% */
+.day-event-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 3;
+  padding: 4px;
+  min-height: 0;
+}
+
+/* Bottom row: expenses — takes ~40% */
+.day-event-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 2;
+  padding: 4px;
+  background-color: #f3f4f6;
+  border-top: 1px solid #e5e7eb;
+  min-height: 0;
+}
+
+.day-event-count {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.day-event-spent {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #374151;
+}
+
+.day-event-spent-empty {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #9ca3af;
+}
+
+/* Hide the default +N more link since we only have 1 event per day */
+.rbc-show-more {
+  display: none !important;
 }

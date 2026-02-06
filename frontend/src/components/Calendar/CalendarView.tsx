@@ -1,53 +1,62 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Calendar, momentLocalizer, NavigateAction, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '../../styles/calendar.css';
 import { useCalendar } from '../../hooks/useCalendar';
 import { TaskPanel } from '../Tasks/TaskPanel';
-import { HEX_COLORS } from '../../utils/colorMap';
 import { CalendarEvent } from '../../types/calendar.types';
+import { DayEvent } from './DayEvent';
 
 const localizer = momentLocalizer(moment);
 
-function CustomToolbar({ label, onNavigate }: ToolbarProps) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onNavigate('PREV')}
-          className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-          aria-label="Previous month"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <button
-          onClick={() => onNavigate('NEXT')}
-          className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
-          aria-label="Next month"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 6 15 12 9 18" />
-          </svg>
-        </button>
-        <span className="text-lg font-semibold text-gray-800 ml-2">{label}</span>
+function createToolbar(monthlyTotal: number) {
+  return function CustomToolbar({ label, onNavigate }: ToolbarProps) {
+    return (
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate('PREV')}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+            aria-label="Previous month"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <button
+            onClick={() => onNavigate('NEXT')}
+            className="p-1.5 rounded-full hover:bg-gray-100 transition-colors text-gray-600"
+            aria-label="Next month"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 6 15 12 9 18" />
+            </svg>
+          </button>
+          <span className="text-lg font-semibold text-gray-800 ml-2">{label}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-500">
+            Monthly: <span className="text-gray-800 font-semibold">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
+          </span>
+          <button
+            onClick={() => onNavigate('TODAY')}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Today
+          </button>
+        </div>
       </div>
-      <button
-        onClick={() => onNavigate('TODAY')}
-        className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-      >
-        Today
-      </button>
-    </div>
-  );
+    );
+  };
 }
 
 export function CalendarView() {
-  const { events, loading, loadMonth } = useCalendar();
+  const { events, loading, monthlyTotal, loadMonth } = useCalendar();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  const Toolbar = useMemo(() => createToolbar(monthlyTotal), [monthlyTotal]);
 
   useEffect(() => {
     loadMonth(currentDate);
@@ -90,17 +99,17 @@ export function CalendarView() {
         onSelectSlot={handleSelectSlot}
         onSelectEvent={handleSelectEvent}
         selectable
-        components={{ toolbar: CustomToolbar }}
-        eventPropGetter={(event: CalendarEvent) => ({
+        components={{
+          toolbar: Toolbar,
+          event: DayEvent,
+        }}
+        eventPropGetter={() => ({
+          className: 'day-event-wrapper',
           style: {
-            backgroundColor: HEX_COLORS[event.resource.completedCount],
-            borderColor: HEX_COLORS[event.resource.completedCount],
-            color: event.resource.completedCount <= 2 ? '#ffffff' : '#000000',
+            backgroundColor: 'transparent',
             border: 'none',
-            borderRadius: '4px',
-            padding: '2px 5px',
-            fontSize: '12px',
-            fontWeight: 'bold',
+            padding: 0,
+            margin: 0,
           },
         })}
       />

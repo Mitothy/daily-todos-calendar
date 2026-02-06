@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createOrUpdateTaskEvent, getTasksForDate } from '../services/googleCalendarService.js';
+import { createOrUpdateTaskEvent, getTasksForDate, deleteTaskEvent } from '../services/googleCalendarService.js';
 import { createEmptyTasks, toggleTask, validateTasks, validateExpenses, calculateTotalSpent } from '../services/taskService.js';
 import { getColorId } from '../utils/colorMapper.js';
 import { Task, Expense } from '../types/task.types.js';
@@ -143,5 +143,21 @@ export async function bulkUpdateTasks(req: Request, res: Response) {
   } catch (error: any) {
     console.error('Bulk update error:', error.message);
     res.status(500).json({ error: 'Failed to update tasks' });
+  }
+}
+
+export async function deleteTasks(req: Request, res: Response) {
+  try {
+    const { date } = req.params;
+    const deleted = await deleteTaskEvent(req.auth!, date, req.session.userId!);
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'No tasks found for this date' });
+    }
+
+    res.json({ message: 'Deleted successfully' });
+  } catch (error: any) {
+    console.error('Delete tasks error:', error.message);
+    res.status(500).json({ error: 'Failed to delete tasks' });
   }
 }

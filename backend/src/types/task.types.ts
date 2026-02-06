@@ -3,6 +3,7 @@ export interface Task {
   title: string;
   completed: boolean;
   completedAt: string | null;
+  notes: string;
 }
 
 export interface Expense {

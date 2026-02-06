@@ -43,12 +43,12 @@ export function useTasks() {
     }
   }, []);
 
-  const createTasks = useCallback(async (date: Date, newTasks: Task[]) => {
+  const createTasks = useCallback(async (date: Date, newTasks: Task[], expenses: Expense[] = []) => {
     setLoading(true);
     setError(null);
     try {
       const dateKey = formatDateKey(date);
-      const response = await api.post(`/tasks/${dateKey}`, { tasks: newTasks });
+      const response = await api.post(`/tasks/${dateKey}`, { tasks: newTasks, expenses });
       setTasks(response.data.tasks);
       return response.data;
     } catch (err: any) {
@@ -74,5 +74,21 @@ export function useTasks() {
     }
   }, []);
 
-  return { tasks, loading, error, loadTasks, saveTasks, createTasks, toggleTask };
+  const deleteTasks = useCallback(async (date: Date) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dateKey = formatDateKey(date);
+      await api.delete(`/tasks/${dateKey}`);
+      setTasks([]);
+      return true;
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete tasks');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { tasks, loading, error, loadTasks, saveTasks, createTasks, toggleTask, deleteTasks };
 }

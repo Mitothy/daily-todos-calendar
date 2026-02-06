@@ -5,7 +5,7 @@ import { ExpenseList } from '../Expenses/ExpenseList';
 import { ErrorMessage } from '../Common/ErrorMessage';
 import { formatDisplayDate } from '../../utils/dateHelpers';
 import { HEX_COLORS } from '../../utils/colorMap';
-import { Task, Expense } from '../../types/task.types';
+import { Task, Expense, createDefaultTasks } from '../../types/task.types';
 
 interface TaskPanelProps {
   date: Date;
@@ -14,18 +14,19 @@ interface TaskPanelProps {
 }
 
 export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
-  const { loadTasks, saveTasks, createTasks, error } = useTasks();
+  const { loadTasks, saveTasks, createTasks, deleteTasks, error } = useTasks();
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [localExpenses, setLocalExpenses] = useState<Expense[]>([]);
   const [saving, setSaving] = useState(false);
   const [panelLoading, setPanelLoading] = useState(true);
+  const [isNewDay, setIsNewDay] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
 
     let cancelled = false;
 
-    async function loadOrCreate() {
+    async function loadData() {
       setPanelLoading(true);
       const result = await loadTasks(date);
       if (cancelled) return;
@@ -33,21 +34,18 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
       if (result && result.tasks.length > 0) {
         setLocalTasks(result.tasks);
         setLocalExpenses(result.expenses || []);
+        setIsNewDay(false);
       } else {
-        // First time opening this day - create the default event
-        const created = await createTasks(date, []);
-        if (cancelled) return;
-        if (created) {
-          setLocalTasks(created.tasks);
-          setLocalExpenses(created.expenses || []);
-        }
+        setLocalTasks(createDefaultTasks());
+        setLocalExpenses([]);
+        setIsNewDay(true);
       }
       setPanelLoading(false);
     }
 
-    loadOrCreate();
+    loadData();
     return () => { cancelled = true; };
-  }, [date, isOpen, loadTasks, createTasks]);
+  }, [date, isOpen, loadTasks]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -70,6 +68,12 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   const handleTitleChange = useCallback((id: string, title: string) => {
     setLocalTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, title } : t))
+    );
+  }, []);
+
+  const handleNotesChange = useCallback((id: string, notes: string) => {
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, notes } : t))
     );
   }, []);
 
@@ -98,11 +102,23 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
 
   const handleSave = async () => {
     setSaving(true);
-    // Clean up empty expense rows and round amounts before saving
     const cleanedExpenses = localExpenses
       .filter((e) => e.description.trim() || e.amount > 0)
       .map((e) => ({ ...e, amount: Math.round(e.amount * 100) / 100 }));
-    await saveTasks(date, localTasks, cleanedExpenses);
+
+    if (isNewDay) {
+      await createTasks(date, localTasks, cleanedExpenses);
+    } else {
+      await saveTasks(date, localTasks, cleanedExpenses);
+    }
+    setSaving(false);
+    onClose();
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Delete this day\'s tasks and expenses?')) return;
+    setSaving(true);
+    await deleteTasks(date);
     setSaving(false);
     onClose();
   };
@@ -142,6 +158,7 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
                 tasks={localTasks}
                 onToggle={handleToggle}
                 onTitleChange={handleTitleChange}
+                onNotesChange={handleNotesChange}
               />
               <ExpenseList
                 expenses={localExpenses}
@@ -155,20 +172,33 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 rounded-md hover:bg-gray-100 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || panelLoading}
-            className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
+        <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
+          {!isNewDay ? (
+            <button
+              onClick={handleDelete}
+              disabled={saving || panelLoading}
+              className="px-4 py-2 text-sm text-red-500 hover:text-red-700 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              Delete
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 rounded-md hover:bg-gray-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || panelLoading}
+              className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

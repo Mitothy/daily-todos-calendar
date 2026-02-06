@@ -1,12 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Task, Expense } from '../types/task.types.js';
 
+const DEFAULT_TASK_TITLES = [
+  'Daily Supplements',
+  'Skincare and Brush Twice',
+  'Notebook',
+  'Stretching',
+  'Exercise',
+  'Read or Mental Exercise',
+];
+
 export function createEmptyTasks(): Task[] {
-  return Array.from({ length: 6 }, () => ({
+  return DEFAULT_TASK_TITLES.map((title) => ({
     id: uuidv4(),
-    title: '',
+    title,
     completed: false,
     completedAt: null,
+    notes: '',
   }));
 }
 

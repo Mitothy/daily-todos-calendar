@@ -8,6 +8,7 @@ export interface CalendarEvent {
     completedCount: number;
     colorId: string;
     eventId: string;
+    totalSpent: number;
   };
 }
 
@@ -18,5 +19,6 @@ export interface MonthData {
     completedCount: number;
     colorId: string;
     eventId: string;
+    totalSpent: number;
   }>;
 }

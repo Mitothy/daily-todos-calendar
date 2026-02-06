@@ -14,3 +14,7 @@ export function setCachedEventId(userId: string, date: string, eventId: string):
   }
   cache.get(userId)!.set(date, eventId);
 }
+
+export function clearCachedEventId(userId: string, date: string): void {
+  cache.get(userId)?.delete(date);
+}

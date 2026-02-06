@@ -6,6 +6,7 @@ import {
   toggleTaskCompletion,
   updateTaskTitle,
   bulkUpdateTasks,
+  deleteTasks,
 } from '../controllers/tasksController.js';
 
 const router = Router();
@@ -17,5 +18,6 @@ router.post('/:date', createTasks);
 router.patch('/:date/:taskId/toggle', toggleTaskCompletion);
 router.patch('/:date/:taskId/title', updateTaskTitle);
 router.put('/:date', bulkUpdateTasks);
+router.delete('/:date', deleteTasks);
 
 export default router;

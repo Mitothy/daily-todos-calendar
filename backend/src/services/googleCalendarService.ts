@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData } from '../types/task.types.js';
 import { getColorId } from '../utils/colorMapper.js';
-import { getCachedEventId, setCachedEventId } from './eventCache.js';
+import { getCachedEventId, setCachedEventId, clearCachedEventId } from './eventCache.js';
 
 // Get the next day string for date range queries
 function getNextDay(date: string): string {
@@ -98,7 +98,7 @@ export async function createOrUpdateTaskEvent(
     extendedProperties: {
       private: {
         appId: 'dailyTasksTracker',
-        version: '1.1',
+        version: '1.3',
         tasksData: JSON.stringify(tasksData),
         expensesData: JSON.stringify(expensesData),
       },
@@ -168,9 +168,12 @@ export async function getTasksForDate(
     totalSpent = parsed.totalSpent;
   }
 
+  // Backward compat: ensure each task has a notes field
+  const tasks = tasksData.tasks.map((t) => ({ ...t, notes: t.notes || '' }));
+
   return {
     date,
-    tasks: tasksData.tasks,
+    tasks,
     completionRate: tasksData.completionRate,
     colorId: event.colorId || getColorId(completedCount),
     eventId: event.id!,
@@ -204,11 +207,18 @@ export async function getMonthEvents(
       const tasksData: TasksData = JSON.parse(tasksDataStr);
       completedCount = tasksData.tasks.filter((t) => t.completed).length;
     }
+    const expensesDataStr = event.extendedProperties?.private?.expensesData;
+    let totalSpent = 0;
+    if (expensesDataStr) {
+      const expensesData: ExpensesData = JSON.parse(expensesDataStr);
+      totalSpent = expensesData.totalSpent;
+    }
     return {
       date: event.start?.date || '',
       completedCount,
       colorId: event.colorId || getColorId(completedCount),
       eventId: event.id!,
+      totalSpent,
     };
   });
 
@@ -216,4 +226,28 @@ export async function getMonthEvents(
     month: `${year}-${String(month).padStart(2, '0')}`,
     dates,
   };
+}
+
+export async function deleteTaskEvent(
+  auth: OAuth2Client,
+  date: string,
+  userId: string
+): Promise<boolean> {
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const cachedId = getCachedEventId(userId, date);
+  const event = await findExistingEvent(calendar, date, cachedId ?? undefined);
+
+  if (!event) {
+    return false;
+  }
+
+  await calendar.events.delete({
+    calendarId: 'primary',
+    eventId: event.id!,
+  });
+
+  clearCachedEventId(userId, date);
+  console.log(`[deleteTaskEvent] Deleted event ${event.id} for date ${date}`);
+  return true;
 }
