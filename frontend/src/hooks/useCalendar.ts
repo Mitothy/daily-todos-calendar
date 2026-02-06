@@ -15,6 +15,7 @@ export function useCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const [distribution, setDistribution] = useState<Record<number, number>>({});
 
   const loadMonth = useCallback(async (date: Date) => {
     setLoading(true);
@@ -32,12 +33,17 @@ export function useCalendar() {
       }
       setMonthlyTotal(Math.round(total * 100) / 100);
 
+      // Calculate distribution of completion counts
+      const dist: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+
       // Generate events for ALL days in the month
       const allDays = getDaysInMonth(year, month);
       const calendarEvents: CalendarEvent[] = allDays.map((dayStr) => {
         const backendData = backendDates.get(dayStr);
         const completedCount = backendData?.completedCount ?? 0;
         const totalSpent = backendData?.totalSpent ?? 0;
+
+        dist[completedCount] = (dist[completedCount] || 0) + 1;
 
         return {
           title: totalSpent > 0
@@ -56,6 +62,7 @@ export function useCalendar() {
         };
       });
 
+      setDistribution(dist);
       setEvents(calendarEvents);
     } catch (err) {
       console.error('Failed to load month data:', err);
@@ -64,5 +71,5 @@ export function useCalendar() {
     }
   }, []);
 
-  return { events, loading, monthlyTotal, loadMonth };
+  return { events, loading, monthlyTotal, distribution, loadMonth };
 }

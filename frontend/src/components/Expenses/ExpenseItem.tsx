@@ -16,10 +16,10 @@ export function ExpenseItem({ expense, onDescriptionChange, onAmountChange, onDe
         onChange={(e) => onDescriptionChange(expense.id, e.target.value)}
         placeholder="Description"
         maxLength={200}
-        className="flex-1 px-2 py-1 border-b border-gray-200 focus:border-blue-400 focus:outline-none text-sm text-gray-700 bg-transparent"
+        className="flex-1 px-2 py-1 border-b border-gray-200 dark:border-slate-600 focus:border-blue-400 dark:focus:border-blue-500 focus:outline-none text-sm text-gray-700 dark:text-gray-200 bg-transparent"
       />
       <div className="flex items-center">
-        <span className="text-sm text-gray-400 mr-1">{'\u20B1'}</span>
+        <span className="text-sm text-gray-400 dark:text-slate-500 mr-1">{'\u20B1'}</span>
         <input
           type="number"
           value={expense.amount || ''}
@@ -27,12 +27,12 @@ export function ExpenseItem({ expense, onDescriptionChange, onAmountChange, onDe
           placeholder="0.00"
           step="0.01"
           min="0"
-          className="w-20 px-2 py-1 border-b border-gray-200 focus:border-blue-400 focus:outline-none text-sm text-gray-700 text-right bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-20 px-2 py-1 border-b border-gray-200 dark:border-slate-600 focus:border-blue-400 dark:focus:border-blue-500 focus:outline-none text-sm text-gray-700 dark:text-gray-200 text-right bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
       </div>
       <button
         onClick={() => onDelete(expense.id)}
-        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+        className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
         aria-label="Delete expense"
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

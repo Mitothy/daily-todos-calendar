@@ -129,17 +129,17 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="absolute inset-0 bg-black/50 dark:bg-black/70" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transition-colors">
         {/* Header */}
-        <div className="px-6 py-4 border-b" style={{ backgroundColor: HEX_COLORS[completedCount] + '22' }}>
-          <h2 className="text-lg font-semibold text-gray-800">{formatDisplayDate(date)}</h2>
+        <div className="px-6 py-4 border-b dark:border-slate-700" style={{ backgroundColor: HEX_COLORS[completedCount] + '22' }}>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{formatDisplayDate(date)}</h2>
           <div className="flex items-center gap-2 mt-1">
             <div
               className="w-3 h-3 rounded-full"
               style={{ backgroundColor: HEX_COLORS[completedCount] }}
             />
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               Completed: {completedCount}/6
             </span>
           </div>
@@ -172,12 +172,12 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-gray-50 flex justify-between">
+        <div className="px-6 py-4 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-between">
           {!isNewDay ? (
             <button
               onClick={handleDelete}
               disabled={saving || panelLoading}
-              className="px-4 py-2 text-sm text-red-500 hover:text-red-700 rounded-md hover:bg-red-50 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
             >
               Delete
             </button>
@@ -187,7 +187,7 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 rounded-md hover:bg-gray-100 transition-colors"
+              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>

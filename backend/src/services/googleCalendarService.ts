@@ -4,6 +4,40 @@ import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData } from '../types
 import { getColorId } from '../utils/colorMapper.js';
 import { getCachedEventId, setCachedEventId, clearCachedEventId } from './eventCache.js';
 
+// Build a human-readable description for the Google Calendar event
+function buildEventDescription(tasks: Task[], expenses: Expense[], totalSpent: number): string {
+  const lines: string[] = [];
+
+  // Tasks section
+  lines.push('📋 TASKS');
+  lines.push('─'.repeat(20));
+  tasks.forEach((task, i) => {
+    const checkbox = task.completed ? '✅' : '⬜';
+    const title = task.title || `Task ${i + 1}`;
+    const notes = task.notes ? ` (${task.notes})` : '';
+    lines.push(`${checkbox} ${title}${notes}`);
+  });
+
+  const completedCount = tasks.filter(t => t.completed).length;
+  lines.push('');
+  lines.push(`Progress: ${completedCount}/6 tasks completed`);
+
+  // Expenses section (only if there are expenses)
+  if (expenses.length > 0) {
+    lines.push('');
+    lines.push('💰 EXPENSES');
+    lines.push('─'.repeat(20));
+    expenses.forEach(expense => {
+      const desc = expense.description || 'Unnamed expense';
+      lines.push(`• ${desc}: ₱${expense.amount.toFixed(2)}`);
+    });
+    lines.push('');
+    lines.push(`Total Spent: ₱${totalSpent.toFixed(2)}`);
+  }
+  
+  return lines.join('\n');
+}
+
 // Get the next day string for date range queries
 function getNextDay(date: string): string {
   const d = new Date(`${date}T12:00:00Z`);
@@ -21,7 +55,13 @@ function getPrevDay(date: string): string {
 // Find existing task event for a date.
 // If knownEventId is provided (from cache), use strongly-consistent events.get()
 // instead of eventually-consistent events.list().
-async function findExistingEvent(calendar: any, date: string, knownEventId?: string) {
+// Returns { event, cacheWasStale } to let caller know if cache needs clearing.
+async function findExistingEvent(
+  calendar: any,
+  date: string,
+  knownEventId?: string,
+  userId?: string
+): Promise<{ event: any | null; cacheWasStale: boolean }> {
   // Try cached eventId first (strongly consistent lookup)
   if (knownEventId) {
     try {
@@ -34,11 +74,15 @@ async function findExistingEvent(calendar: any, date: string, knownEventId?: str
         const eventDate = event.start?.date || event.start?.dateTime?.split('T')[0];
         if (eventDate === date) {
           console.log(`[findExistingEvent] cache hit: found event ${knownEventId} for date=${date}`);
-          return event;
+          return { event, cacheWasStale: false };
         }
       }
     } catch (err: any) {
-      console.log(`[findExistingEvent] cached eventId ${knownEventId} not found (${err.message}), falling back to search`);
+      console.log(`[findExistingEvent] cached eventId ${knownEventId} not found (${err.message}), clearing cache and falling back to search`);
+      // Clear the stale cache entry
+      if (userId) {
+        clearCachedEventId(userId, date);
+      }
     }
   }
 
@@ -60,7 +104,7 @@ async function findExistingEvent(calendar: any, date: string, knownEventId?: str
   });
 
   console.log(`[findExistingEvent] date=${date}, found ${items.length} items in window, exact match: ${!!match}`);
-  return match || null;
+  return { event: match || null, cacheWasStale: !!knownEventId };
 }
 
 export async function createOrUpdateTaskEvent(
@@ -86,19 +130,24 @@ export async function createOrUpdateTaskEvent(
   };
 
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const roundedTotalSpent = Math.round(totalSpent * 100) / 100;
   const expensesData: ExpensesData = {
     expenses,
-    totalSpent: Math.round(totalSpent * 100) / 100,
+    totalSpent: roundedTotalSpent,
     lastUpdated: new Date().toISOString(),
   };
 
+  // Build human-readable description for the calendar event
+  const description = buildEventDescription(tasks, expenses, roundedTotalSpent);
+
   const eventBody = {
     summary: `Daily Tasks: ${completedCount}/6`,
+    description,
     colorId,
     extendedProperties: {
       private: {
         appId: 'dailyTasksTracker',
-        version: '1.3',
+        version: '1.4',
         tasksData: JSON.stringify(tasksData),
         expensesData: JSON.stringify(expensesData),
       },
@@ -106,31 +155,42 @@ export async function createOrUpdateTaskEvent(
   };
 
   const cachedId = getCachedEventId(userId, date);
-  const existing = await findExistingEvent(calendar, date, cachedId ?? undefined);
+  const { event: existing } = await findExistingEvent(calendar, date, cachedId ?? undefined, userId);
 
   if (existing) {
     console.log(`[createOrUpdate] PATCHING existing event ${existing.id} for date ${date}`);
     setCachedEventId(userId, date, existing.id!);
-    await calendar.events.patch({
-      calendarId: 'primary',
-      eventId: existing.id!,
-      requestBody: eventBody,
-    });
-    return existing.id!;
-  } else {
-    console.log(`[createOrUpdate] INSERTING new event for date ${date}`);
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      requestBody: {
-        ...eventBody,
-        start: { date },
-        end: { date },
-      },
-    });
-    const newEventId = response.data.id!;
-    setCachedEventId(userId, date, newEventId);
-    return newEventId;
+    try {
+      await calendar.events.patch({
+        calendarId: 'primary',
+        eventId: existing.id!,
+        requestBody: eventBody,
+      });
+      return existing.id!;
+    } catch (err: any) {
+      // If resource was deleted, clear cache and insert new
+      if (err.message?.includes('deleted') || err.code === 410) {
+        console.log(`[createOrUpdate] Event ${existing.id} was deleted externally, inserting new`);
+        clearCachedEventId(userId, date);
+      } else {
+        throw err;
+      }
+    }
   }
+
+  // Insert new event
+  console.log(`[createOrUpdate] INSERTING new event for date ${date}`);
+  const response = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: {
+      ...eventBody,
+      start: { date },
+      end: { date },
+    },
+  });
+  const newEventId = response.data.id!;
+  setCachedEventId(userId, date, newEventId);
+  return newEventId;
 }
 
 export async function getTasksForDate(
@@ -141,7 +201,7 @@ export async function getTasksForDate(
   const calendar = google.calendar({ version: 'v3', auth });
 
   const cachedId = getCachedEventId(userId, date);
-  const event = await findExistingEvent(calendar, date, cachedId ?? undefined);
+  const { event } = await findExistingEvent(calendar, date, cachedId ?? undefined, userId);
 
   if (!event) {
     return null;
@@ -236,18 +296,29 @@ export async function deleteTaskEvent(
   const calendar = google.calendar({ version: 'v3', auth });
 
   const cachedId = getCachedEventId(userId, date);
-  const event = await findExistingEvent(calendar, date, cachedId ?? undefined);
+  const { event } = await findExistingEvent(calendar, date, cachedId ?? undefined, userId);
 
   if (!event) {
+    // Already deleted or doesn't exist
+    clearCachedEventId(userId, date);
     return false;
   }
 
-  await calendar.events.delete({
-    calendarId: 'primary',
-    eventId: event.id!,
-  });
+  try {
+    await calendar.events.delete({
+      calendarId: 'primary',
+      eventId: event.id!,
+    });
+    console.log(`[deleteTaskEvent] Deleted event ${event.id} for date ${date}`);
+  } catch (err: any) {
+    // If already deleted, that's fine
+    if (err.message?.includes('deleted') || err.code === 410) {
+      console.log(`[deleteTaskEvent] Event ${event.id} was already deleted`);
+    } else {
+      throw err;
+    }
+  }
 
   clearCachedEventId(userId, date);
-  console.log(`[deleteTaskEvent] Deleted event ${event.id} for date ${date}`);
   return true;
 }
