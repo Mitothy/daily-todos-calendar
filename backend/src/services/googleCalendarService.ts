@@ -2,7 +2,7 @@ import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData } from '../types/task.types.js';
 import { getColorId } from '../utils/colorMapper.js';
-import { getCachedEventId, setCachedEventId, clearCachedEventId } from './eventCache.js';
+import { getCachedEventId, setCachedEventId, clearCachedEventId, getAllCachedDatesForMonth } from './eventCache.js';
 
 // Build a human-readable description for the Google Calendar event
 function buildEventDescription(tasks: Task[], expenses: Expense[], totalSpent: number): string {
@@ -93,7 +93,7 @@ async function findExistingEvent(
     calendarId: 'primary',
     timeMin: `${prevDay}T00:00:00Z`,
     timeMax: `${dayAfterNext}T00:00:00Z`,
-    privateExtendedProperty: 'appId=dailyTasksTracker',
+    privateExtendedProperty: ['appId=dailyTasksTracker'],
     maxResults: 10,
   });
 
@@ -245,10 +245,35 @@ export async function getTasksForDate(
 export async function getMonthEvents(
   auth: OAuth2Client,
   year: number,
-  month: number
+  month: number,
+  userId: string
 ) {
   const calendar = google.calendar({ version: 'v3', auth });
 
+  // First, try to get events from cache using strongly consistent events.get()
+  // This ensures recently created/updated events are immediately visible
+  const cachedEvents: Map<string, any> = new Map();
+  const allCachedDates = getAllCachedDatesForMonth(userId, year, month);
+
+  // Fetch cached events in parallel using strongly consistent API
+  const cachedPromises = allCachedDates.map(async ({ date, eventId }) => {
+    try {
+      const response = await calendar.events.get({
+        calendarId: 'primary',
+        eventId,
+      });
+      const event = response.data;
+      if (event && event.extendedProperties?.private?.appId === 'dailyTasksTracker') {
+        cachedEvents.set(date, event);
+      }
+    } catch (err: any) {
+      // Event was deleted externally, clear from cache
+      clearCachedEventId(userId, date);
+    }
+  });
+  await Promise.all(cachedPromises);
+
+  // Also do the list query to catch any events not in our cache
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
 
@@ -256,11 +281,27 @@ export async function getMonthEvents(
     calendarId: 'primary',
     timeMin: startDate.toISOString(),
     timeMax: new Date(endDate.getTime() + 86400000).toISOString(),
-    privateExtendedProperty: 'appId=dailyTasksTracker',
+    privateExtendedProperty: ['appId=dailyTasksTracker'],
     maxResults: 31,
   });
 
-  const dates = (response.data.items || []).map((event) => {
+  // Merge: cached events take priority (they're more up-to-date)
+  const eventsByDate = new Map<string, any>();
+
+  // Add list results first
+  for (const event of (response.data.items || [])) {
+    const date = event.start?.date || '';
+    if (date && !cachedEvents.has(date)) {
+      eventsByDate.set(date, event);
+    }
+  }
+
+  // Then overlay cached events (overwrite list results)
+  for (const [date, event] of cachedEvents) {
+    eventsByDate.set(date, event);
+  }
+
+  const dates = Array.from(eventsByDate.values()).map((event: any) => {
     const tasksDataStr = event.extendedProperties?.private?.tasksData;
     let completedCount = 0;
     if (tasksDataStr) {

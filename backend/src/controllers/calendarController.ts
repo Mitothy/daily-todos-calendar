@@ -11,7 +11,8 @@ export async function getMonthData(req: Request, res: Response) {
       return res.status(400).json({ error: 'Invalid year or month' });
     }
 
-    const data = await getMonthEvents(req.auth!, year, month);
+    const userId = req.session.userId!;
+    const data = await getMonthEvents(req.auth!, year, month, userId);
     res.json(data);
   } catch (error: any) {
     console.error('Get month data error:', error.message);
