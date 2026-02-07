@@ -53,3 +53,61 @@ html {
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
+
+/* === Mobile touch improvements === */
+
+/* Safe area padding for notched devices */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+/* Prevent text selection on interactive elements (mobile) */
+@media (max-width: 640px) {
+  button, .day-event-fill {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+}
+
+/* Better tap targets on mobile */
+@media (max-width: 640px) {
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Exception for small inline buttons */
+  button.inline-btn {
+    min-height: auto;
+    min-width: auto;
+  }
+}
+
+/* Prevent overscroll bounce on iOS */
+html {
+  overscroll-behavior: none;
+}
+
+/* Improve input appearance on mobile */
+@media (max-width: 640px) {
+  input, textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Active state for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .day-event-fill:active {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+}

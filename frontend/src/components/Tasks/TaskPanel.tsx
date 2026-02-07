@@ -128,25 +128,42 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50 dark:bg-black/70" onClick={onClose} />
-      <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transition-colors">
+      <div className="relative bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-md sm:mx-4 overflow-hidden transition-colors max-h-[90vh] sm:max-h-none flex flex-col">
+        {/* Mobile drag handle */}
+        <div className="sm:hidden flex justify-center py-2 bg-white dark:bg-slate-800">
+          <div className="w-10 h-1 bg-gray-300 dark:bg-slate-600 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="px-6 py-4 border-b dark:border-slate-700" style={{ backgroundColor: HEX_COLORS[completedCount] + '22' }}>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{formatDisplayDate(date)}</h2>
-          <div className="flex items-center gap-2 mt-1">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: HEX_COLORS[completedCount] }}
-            />
-            <span className="text-sm text-gray-600 dark:text-gray-300">
-              Completed: {completedCount}/6
-            </span>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b dark:border-slate-700 flex items-center justify-between" style={{ backgroundColor: HEX_COLORS[completedCount] + '22' }}>
+          <div>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">{formatDisplayDate(date)}</h2>
+            <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+              <div
+                className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full"
+                style={{ backgroundColor: HEX_COLORS[completedCount] }}
+              />
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+                Completed: {completedCount}/6
+              </span>
+            </div>
           </div>
+          {/* Mobile close button */}
+          <button
+            onClick={onClose}
+            className="sm:hidden p-2 -mr-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Body */}
-        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 overflow-y-auto flex-1">
           {panelLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -172,29 +189,29 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-between">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-between pb-safe">
           {!isNewDay ? (
             <button
               onClick={handleDelete}
               disabled={saving || panelLoading}
-              className="px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+              className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
             >
               Delete
             </button>
           ) : (
             <div />
           )}
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+              className="hidden sm:block px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving || panelLoading}
-              className="px-4 py-2 text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors disabled:opacity-50"
+              className="px-4 sm:px-4 py-2.5 sm:py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg sm:rounded-md transition-colors disabled:opacity-50 min-w-[80px]"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>

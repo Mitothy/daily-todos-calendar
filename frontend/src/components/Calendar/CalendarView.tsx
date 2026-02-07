@@ -17,41 +17,49 @@ interface CalendarViewProps {
 }
 
 function createToolbar(monthlyTotal: number) {
-  return function CustomToolbar({ label, onNavigate }: ToolbarProps) {
+  return function CustomToolbar({ label, onNavigate }: ToolbarProps<CalendarEvent, object>) {
     return (
-      <div className="flex items-center justify-between px-2 py-3 mb-2">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => onNavigate('PREV')}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            aria-label="Previous month"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <button
-            onClick={() => onNavigate('NEXT')}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            aria-label="Next month"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 6 15 12 9 18" />
-            </svg>
-          </button>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white ml-2 tracking-tight">{label}</h2>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-slate-700 rounded-lg">
-            <svg className="w-4 h-4 text-gray-400 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-sm text-gray-500 dark:text-slate-400">Monthly:</span>
-            <span className="text-sm font-semibold text-gray-800 dark:text-white">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-1 sm:px-2 py-2 sm:py-3 mb-1 sm:mb-2 gap-2 sm:gap-0">
+        <div className="flex items-center justify-between sm:justify-start gap-1">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onNavigate('PREV')}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              aria-label="Previous month"
+            >
+              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
+            <button
+              onClick={() => onNavigate('NEXT')}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 active:bg-gray-200 dark:active:bg-slate-600 transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              aria-label="Next month"
+            >
+              <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 6 15 12 9 18" />
+              </svg>
+            </button>
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white ml-1 sm:ml-2 tracking-tight">{label}</h2>
           </div>
           <button
             onClick={() => onNavigate('TODAY')}
-            className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+            className="sm:hidden px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
+          >
+            Today
+          </button>
+        </div>
+        <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+          <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-50 dark:bg-slate-700 rounded-lg flex-1 sm:flex-none">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">Monthly:</span>
+            <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-white">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
+          </div>
+          <button
+            onClick={() => onNavigate('TODAY')}
+            className="hidden sm:block px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-lg transition-colors"
           >
             Today
           </button>
@@ -100,7 +108,7 @@ export function CalendarView({ events, loading, monthlyTotal, loadMonth }: Calen
         events={events}
         startAccessor="start"
         endAccessor="end"
-        style={{ height: '75vh' }}
+        className="calendar-responsive"
         views={['month']}
         defaultView="month"
         date={currentDate}
