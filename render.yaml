@@ -31,7 +31,6 @@ services:
   - type: web
     name: mit-daily-tracker
     runtime: static
-    plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
