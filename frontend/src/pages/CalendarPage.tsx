@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Header } from '../components/Layout/Header';
 import { CalendarView } from '../components/Calendar/CalendarView';
-import { ColorLegend } from '../components/Calendar/ColorLegend';
-import { NonNegotiables } from '../components/Sidebar/NonNegotiables';
+import { ProgressLegendInline } from '../components/Calendar/ProgressLegendInline';
+import { Principles } from '../components/Sidebar/NonNegotiables';
 import { Goals } from '../components/Sidebar/Goals';
 import { BibleVerse } from '../components/Sidebar/BibleVerse';
 import { useCalendar } from '../hooks/useCalendar';
@@ -17,12 +17,11 @@ export function CalendarPage() {
       <div className="max-w-[1400px] mx-auto px-2 sm:px-4 py-3 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-5">
           {/* Left sidebar - hidden on mobile, toggle-able */}
-          <div className={`lg:w-52 shrink-0 order-2 lg:order-1 flex flex-col gap-3 sm:gap-4 ${showSidebars ? 'block' : 'hidden lg:flex'}`}>
-            <NonNegotiables />
-            <Goals />
+          <div className={`lg:w-64 shrink-0 order-2 lg:order-1 flex flex-col gap-3 sm:gap-4 ${showSidebars ? 'block' : 'hidden lg:flex'}`}>
+            <Principles />
           </div>
 
-          {/* Calendar */}
+          {/* Calendar with inline progress legend */}
           <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm p-2 sm:p-4 min-w-0 order-1 lg:order-2 transition-colors">
             <CalendarView
               events={events}
@@ -30,11 +29,12 @@ export function CalendarPage() {
               monthlyTotal={monthlyTotal}
               loadMonth={loadMonth}
             />
+            <ProgressLegendInline distribution={distribution} totalDays={events.length} />
           </div>
 
-          {/* Right sidebar - always show legend on mobile for context */}
+          {/* Right sidebar */}
           <div className={`lg:w-52 shrink-0 flex flex-col gap-3 sm:gap-4 order-3 ${showSidebars ? 'block' : 'hidden lg:flex'}`}>
-            <ColorLegend distribution={distribution} totalDays={events.length} />
+            <Goals />
             <BibleVerse />
           </div>
         </div>
