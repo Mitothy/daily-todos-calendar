@@ -1,8 +1,8 @@
 /**
- * Daily Non-Negotiables — principles to live by.
+ * Daily Principles — principles to live by.
  * Edit this list to update what shows on the left sidebar.
  */
-export const NON_NEGOTIABLES: string[] = [
+export const PRINCIPLES: string[] = [
   'Treat others the way you want to be treated',
   'Stay true to your word,  don\'t make promises you cant keep',
   'Be just, practice kindness and gratitude, and walk humbly with God.',
