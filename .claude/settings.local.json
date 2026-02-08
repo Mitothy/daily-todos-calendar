@@ -12,12 +12,7 @@
       "Bash(findstr:*)",
       "Bash(curl:*)",
       "Bash(echo:*)",
-      "Bash(dir /s /b *.json)",
-      "Bash(npx tsc:*)",
-      "Bash(dir:*)",
-      "Bash(del \"c:\\\\Users\\\\timot\\\\OneDrive\\\\Documents\\\\GitHub\\\\daily-todos-calendar\\\\backend\\\\.event-cache.json\")",
-      "Bash(npm run build:*)",
-      "Bash(timeout:*)"
+      "Bash(taskkill:*)"
     ]
   }
 }

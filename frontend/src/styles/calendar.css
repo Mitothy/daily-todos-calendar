@@ -224,6 +224,11 @@
   letter-spacing: -0.01em;
 }
 
+/* Date badge inside event - hidden on desktop, shown on mobile */
+.day-event-date {
+  display: none;
+}
+
 .day-event-spent {
   font-size: 11px;
   font-weight: 600;
@@ -315,7 +320,7 @@
 @media (max-width: 640px) {
   /* Smaller month row height on mobile */
   .rbc-month-view .rbc-month-row {
-    min-height: 70px;
+    min-height: 65px;
   }
 
   /* Compact header padding */
@@ -324,40 +329,61 @@
     font-size: 10px;
   }
 
-  /* Smaller date numbers */
+  /* HIDE the default date row completely on mobile */
   .rbc-date-cell {
-    padding: 2px 4px;
-    font-size: 11px;
+    display: none !important;
   }
 
-  /* Smaller event content for mobile */
+  /* Date header row hidden on mobile */
+  .rbc-month-view .rbc-row-content > .rbc-row:first-child {
+    display: none !important;
+  }
+
+  /* Event fills full cell on mobile */
   .day-event-fill {
-    margin: 2px;
-    border-radius: 6px;
+    margin: 1px;
+    border-radius: 5px;
+    position: relative;
   }
 
+  /* Show our custom date badge on mobile */
+  .day-event-date {
+    display: block;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-size: 8px;
+    font-weight: 600;
+    opacity: 0.7;
+  }
+
+  /* Make completion count bigger on mobile */
   .day-event-count {
-    font-size: 11px;
+    font-size: 14px;
+    font-weight: 800;
   }
 
+  /* Keep expenses visible but compact */
   .day-event-spent,
   .day-event-spent-empty {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .day-event-top {
-    padding: 2px;
+    padding: 4px;
+    flex: 3;
   }
 
   .day-event-bottom {
-    padding: 2px;
+    padding: 3px;
+    flex: 2;
   }
 }
 
 /* Extra small screens (phones in portrait) */
 @media (max-width: 380px) {
   .rbc-month-view .rbc-month-row {
-    min-height: 60px;
+    min-height: 55px;
   }
 
   .rbc-header {
@@ -365,18 +391,19 @@
     padding: 4px 0;
   }
 
-  .rbc-date-cell {
-    font-size: 10px;
-    padding: 1px 2px;
+  .day-event-date {
+    font-size: 7px;
+    top: 1px;
+    left: 2px;
   }
 
   .day-event-count {
-    font-size: 10px;
+    font-size: 13px;
   }
 
   .day-event-spent,
   .day-event-spent-empty {
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .day-event-fill {
