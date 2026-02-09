@@ -87,23 +87,30 @@ async function findExistingEvent(
   }
 
   // Fall back to list search with padded window for timezone safety
+  // Use singleEvents=true to expand recurring events and ensure all-day events are matched correctly
   const prevDay = getPrevDay(date);
   const dayAfterNext = getNextDay(getNextDay(date));
   const response = await calendar.events.list({
     calendarId: 'primary',
     timeMin: `${prevDay}T00:00:00Z`,
-    timeMax: `${dayAfterNext}T00:00:00Z`,
+    timeMax: `${dayAfterNext}T23:59:59Z`,
     privateExtendedProperty: ['appId=dailyTasksTracker'],
+    singleEvents: true,
     maxResults: 10,
   });
 
   const items = response.data.items || [];
+  console.log(`[findExistingEvent] date=${date}, window=${prevDay} to ${dayAfterNext}, found ${items.length} items`);
+  items.forEach((item: any) => {
+    console.log(`  - event: ${item.id}, start: ${JSON.stringify(item.start)}, summary: ${item.summary}`);
+  });
+
   const match = items.find((item: any) => {
     const eventDate = item.start?.date || item.start?.dateTime?.split('T')[0];
     return eventDate === date;
   });
 
-  console.log(`[findExistingEvent] date=${date}, found ${items.length} items in window, exact match: ${!!match}`);
+  console.log(`[findExistingEvent] exact match for ${date}: ${!!match}`);
   return { event: match || null, cacheWasStale: !!knownEventId };
 }
 
@@ -284,6 +291,7 @@ export async function getMonthEvents(
     timeMin: startDateStr,
     timeMax: endDateStr,
     privateExtendedProperty: ['appId=dailyTasksTracker'],
+    singleEvents: true,
     maxResults: 31,
   });
 
