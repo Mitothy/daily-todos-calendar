@@ -87,13 +87,15 @@ async function findExistingEvent(
   }
 
   // Fall back to list search with padded window for timezone safety
+  // Use singleEvents=true to properly match all-day events
   const prevDay = getPrevDay(date);
   const dayAfterNext = getNextDay(getNextDay(date));
   const response = await calendar.events.list({
     calendarId: 'primary',
     timeMin: `${prevDay}T00:00:00Z`,
-    timeMax: `${dayAfterNext}T00:00:00Z`,
+    timeMax: `${dayAfterNext}T23:59:59Z`,
     privateExtendedProperty: ['appId=dailyTasksTracker'],
+    singleEvents: true,
     maxResults: 10,
   });
 
@@ -274,14 +276,17 @@ export async function getMonthEvents(
   await Promise.all(cachedPromises);
 
   // Also do the list query to catch any events not in our cache
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0);
+  // Use explicit UTC dates to avoid timezone issues
+  const startDateStr = `${year}-${String(month).padStart(2, '0')}-01T00:00:00Z`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const endDateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59Z`;
 
   const response = await calendar.events.list({
     calendarId: 'primary',
-    timeMin: startDate.toISOString(),
-    timeMax: new Date(endDate.getTime() + 86400000).toISOString(),
+    timeMin: startDateStr,
+    timeMax: endDateStr,
     privateExtendedProperty: ['appId=dailyTasksTracker'],
+    singleEvents: true,
     maxResults: 31,
   });
 

@@ -12,7 +12,11 @@
       "Bash(findstr:*)",
       "Bash(curl:*)",
       "Bash(echo:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(cmd //c \"taskkill /PID 84444 /F\")",
+      "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :5002 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
+      "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :3003 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
+      "Bash(cmd //c \"taskkill /IM node.exe /F\")"
     ]
   }
 }
