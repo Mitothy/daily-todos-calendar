@@ -6,6 +6,7 @@ export const GOALS: string[] = [
   'Consistently go to the Gym 3x a Week, and Improve Cardio',
   'Consistent Sleep Schedule',
   'Better Spending / Saving Habits',
+  '10% of Income Every Month to S&P 500',
   'Finish New Testament',
   'Pray Daily',
   'Land a Solid Entry Level Job',

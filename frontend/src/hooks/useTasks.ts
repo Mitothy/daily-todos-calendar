@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { api } from '../services/api';
-import { Task, Expense, DailyTaskEvent } from '../types/task.types';
+import { Task, Expense, Income, DailyTaskEvent } from '../types/task.types';
 import { formatDateKey } from '../utils/dateHelpers';
 
 export function useTasks() {
@@ -24,7 +24,7 @@ export function useTasks() {
     }
   }, []);
 
-  const saveTasks = useCallback(async (date: Date, updatedTasks: Task[], updatedExpenses: Expense[]) => {
+  const saveTasks = useCallback(async (date: Date, updatedTasks: Task[], updatedExpenses: Expense[], updatedIncomes: Income[] = []) => {
     setLoading(true);
     setError(null);
     try {
@@ -32,6 +32,7 @@ export function useTasks() {
       const response = await api.put(`/tasks/${dateKey}`, {
         tasks: updatedTasks,
         expenses: updatedExpenses,
+        incomes: updatedIncomes,
       });
       setTasks(response.data.tasks);
       return response.data;
@@ -43,12 +44,12 @@ export function useTasks() {
     }
   }, []);
 
-  const createTasks = useCallback(async (date: Date, newTasks: Task[], expenses: Expense[] = []) => {
+  const createTasks = useCallback(async (date: Date, newTasks: Task[], expenses: Expense[] = [], incomes: Income[] = []) => {
     setLoading(true);
     setError(null);
     try {
       const dateKey = formatDateKey(date);
-      const response = await api.post(`/tasks/${dateKey}`, { tasks: newTasks, expenses });
+      const response = await api.post(`/tasks/${dateKey}`, { tasks: newTasks, expenses, incomes });
       setTasks(response.data.tasks);
       return response.data;
     } catch (err: any) {

@@ -12,6 +12,12 @@ export interface Expense {
   amount: number;
 }
 
+export interface Income {
+  id: string;
+  description: string;
+  amount: number;
+}
+
 export interface TasksData {
   tasks: Task[];
   completionRate: number;
@@ -26,6 +32,8 @@ export interface DailyTaskEvent {
   eventId: string;
   expenses: Expense[];
   totalSpent: number;
+  incomes: Income[];
+  totalIncome: number;
 }
 
 export const DEFAULT_TASK_TITLES = [
