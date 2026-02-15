@@ -9,6 +9,7 @@ export interface CalendarEvent {
     colorId: string;
     eventId: string;
     totalSpent: number;
+    totalIncome: number;
   };
 }
 
@@ -20,5 +21,6 @@ export interface MonthData {
     colorId: string;
     eventId: string;
     totalSpent: number;
+    totalIncome: number;
   }>;
 }

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { Task, Expense } from '../types/task.types.js';
+import { Task, Expense, Income } from '../types/task.types.js';
 
 const DEFAULT_TASK_TITLES = [
   'Daily Supplements',
@@ -53,5 +53,22 @@ export function validateExpenses(expenses: Expense[]): string | null {
 
 export function calculateTotalSpent(expenses: Expense[]): number {
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+  return Math.round(total * 100) / 100;
+}
+
+export function validateIncomes(incomes: Income[]): string | null {
+  if (!Array.isArray(incomes)) return 'Incomes must be an array';
+  for (const income of incomes) {
+    if (!income.id) return 'Each income must have an id';
+    if (typeof income.description !== 'string') return 'Each income description must be a string';
+    if (income.description.length > 200) return 'Income description must be 200 characters or less';
+    if (typeof income.amount !== 'number' || isNaN(income.amount)) return 'Each income must have a numeric amount';
+    if (income.amount < 0) return 'Income amount cannot be negative';
+  }
+  return null;
+}
+
+export function calculateTotalIncome(incomes: Income[]): number {
+  const total = incomes.reduce((sum, i) => sum + i.amount, 0);
   return Math.round(total * 100) / 100;
 }

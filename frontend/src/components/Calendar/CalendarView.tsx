@@ -13,10 +13,11 @@ interface CalendarViewProps {
   events: CalendarEvent[];
   loading: boolean;
   monthlyTotal: number;
+  monthlyIncome: number;
   loadMonth: (date: Date) => Promise<void>;
 }
 
-function createToolbar(monthlyTotal: number) {
+function createToolbar(monthlyTotal: number, monthlyIncome: number) {
   return function CustomToolbar({ label, onNavigate }: ToolbarProps<CalendarEvent, object>) {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-1 sm:px-2 py-2 sm:py-3 mb-1 sm:mb-2 gap-2 sm:gap-0">
@@ -50,12 +51,15 @@ function createToolbar(monthlyTotal: number) {
           </button>
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-          <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-50 dark:bg-slate-700 rounded-lg flex-1 sm:flex-none">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">Monthly:</span>
-            <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-white">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <span className="text-xs sm:text-sm text-red-500 dark:text-red-400">Spent:</span>
+              <span className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <span className="text-xs sm:text-sm text-green-500 dark:text-green-400">Income:</span>
+              <span className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">{'\u20B1'}{monthlyIncome.toFixed(2)}</span>
+            </div>
           </div>
           <button
             onClick={() => onNavigate('TODAY')}
@@ -69,11 +73,11 @@ function createToolbar(monthlyTotal: number) {
   };
 }
 
-export function CalendarView({ events, loading, monthlyTotal, loadMonth }: CalendarViewProps) {
+export function CalendarView({ events, loading, monthlyTotal, monthlyIncome, loadMonth }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const Toolbar = useMemo(() => createToolbar(monthlyTotal), [monthlyTotal]);
+  const Toolbar = useMemo(() => createToolbar(monthlyTotal, monthlyIncome), [monthlyTotal, monthlyIncome]);
 
   useEffect(() => {
     loadMonth(currentDate);

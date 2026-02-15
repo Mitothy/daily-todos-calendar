@@ -1,11 +1,17 @@
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData } from '../types/task.types.js';
+import { Task, TasksData, DailyTaskEvent, Expense, ExpensesData, Income, IncomeData } from '../types/task.types.js';
 import { getColorId } from '../utils/colorMapper.js';
 import { getCachedEventId, setCachedEventId, clearCachedEventId, getAllCachedDatesForMonth } from './eventCache.js';
 
 // Build a human-readable description for the Google Calendar event
-function buildEventDescription(tasks: Task[], expenses: Expense[], totalSpent: number): string {
+function buildEventDescription(
+  tasks: Task[],
+  expenses: Expense[],
+  totalSpent: number,
+  incomes: Income[],
+  totalIncome: number
+): string {
   const lines: string[] = [];
 
   // Tasks section
@@ -34,7 +40,20 @@ function buildEventDescription(tasks: Task[], expenses: Expense[], totalSpent: n
     lines.push('');
     lines.push(`Total Spent: ₱${totalSpent.toFixed(2)}`);
   }
-  
+
+  // Income section (only if there are incomes)
+  if (incomes.length > 0) {
+    lines.push('');
+    lines.push('💵 INCOME');
+    lines.push('─'.repeat(20));
+    incomes.forEach(income => {
+      const desc = income.description || 'Unnamed income';
+      lines.push(`• ${desc}: ₱${income.amount.toFixed(2)}`);
+    });
+    lines.push('');
+    lines.push(`Total Income: ₱${totalIncome.toFixed(2)}`);
+  }
+
   return lines.join('\n');
 }
 
@@ -87,7 +106,7 @@ async function findExistingEvent(
   }
 
   // Fall back to list search with padded window for timezone safety
-  // Use singleEvents=true to expand recurring events and ensure all-day events are matched correctly
+  // Use singleEvents=true to properly match all-day events
   const prevDay = getPrevDay(date);
   const dayAfterNext = getNextDay(getNextDay(date));
   const response = await calendar.events.list({
@@ -100,17 +119,12 @@ async function findExistingEvent(
   });
 
   const items = response.data.items || [];
-  console.log(`[findExistingEvent] date=${date}, window=${prevDay} to ${dayAfterNext}, found ${items.length} items`);
-  items.forEach((item: any) => {
-    console.log(`  - event: ${item.id}, start: ${JSON.stringify(item.start)}, summary: ${item.summary}`);
-  });
-
   const match = items.find((item: any) => {
     const eventDate = item.start?.date || item.start?.dateTime?.split('T')[0];
     return eventDate === date;
   });
 
-  console.log(`[findExistingEvent] exact match for ${date}: ${!!match}`);
+  console.log(`[findExistingEvent] date=${date}, found ${items.length} items in window, exact match: ${!!match}`);
   return { event: match || null, cacheWasStale: !!knownEventId };
 }
 
@@ -119,7 +133,8 @@ export async function createOrUpdateTaskEvent(
   date: string,
   tasks: Task[],
   userId: string,
-  expenses: Expense[] = []
+  expenses: Expense[] = [],
+  incomes: Income[] = []
 ): Promise<string> {
   const calendar = google.calendar({ version: 'v3', auth });
 
@@ -144,8 +159,16 @@ export async function createOrUpdateTaskEvent(
     lastUpdated: new Date().toISOString(),
   };
 
+  const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+  const roundedTotalIncome = Math.round(totalIncome * 100) / 100;
+  const incomeData: IncomeData = {
+    incomes,
+    totalIncome: roundedTotalIncome,
+    lastUpdated: new Date().toISOString(),
+  };
+
   // Build human-readable description for the calendar event
-  const description = buildEventDescription(tasks, expenses, roundedTotalSpent);
+  const description = buildEventDescription(tasks, expenses, roundedTotalSpent, incomes, roundedTotalIncome);
 
   const eventBody = {
     summary: `Daily Tasks: ${completedCount}/6`,
@@ -154,9 +177,10 @@ export async function createOrUpdateTaskEvent(
     extendedProperties: {
       private: {
         appId: 'dailyTasksTracker',
-        version: '1.4',
+        version: '1.5',
         tasksData: JSON.stringify(tasksData),
         expensesData: JSON.stringify(expensesData),
+        incomeData: JSON.stringify(incomeData),
       },
     },
   };
@@ -235,6 +259,16 @@ export async function getTasksForDate(
     totalSpent = parsed.totalSpent;
   }
 
+  // Parse income (backward compatible with events created before income existed)
+  const incomeDataStr = event.extendedProperties?.private?.incomeData;
+  let incomes: Income[] = [];
+  let totalIncome = 0;
+  if (incomeDataStr) {
+    const parsed: IncomeData = JSON.parse(incomeDataStr);
+    incomes = parsed.incomes;
+    totalIncome = parsed.totalIncome;
+  }
+
   // Backward compat: ensure each task has a notes field
   const tasks = tasksData.tasks.map((t) => ({ ...t, notes: t.notes || '' }));
 
@@ -246,6 +280,8 @@ export async function getTasksForDate(
     eventId: event.id!,
     expenses,
     totalSpent,
+    incomes,
+    totalIncome,
   };
 }
 
@@ -324,12 +360,19 @@ export async function getMonthEvents(
       const expensesData: ExpensesData = JSON.parse(expensesDataStr);
       totalSpent = expensesData.totalSpent;
     }
+    const incomeDataStr = event.extendedProperties?.private?.incomeData;
+    let totalIncome = 0;
+    if (incomeDataStr) {
+      const incomeData: IncomeData = JSON.parse(incomeDataStr);
+      totalIncome = incomeData.totalIncome;
+    }
     return {
       date: event.start?.date || '',
       completedCount,
       colorId: event.colorId || getColorId(completedCount),
       eventId: event.id!,
       totalSpent,
+      totalIncome,
     };
   });
 
