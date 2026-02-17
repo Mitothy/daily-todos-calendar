@@ -8,7 +8,7 @@ import { BibleVerse } from '../components/Sidebar/BibleVerse';
 import { useCalendar } from '../hooks/useCalendar';
 
 export function CalendarPage() {
-  const { events, loading, monthlyTotal, monthlyIncome, distribution, loadMonth } = useCalendar();
+  const { events, loading, monthlyTotal, monthlyIncome, distribution, currentDate, loadMonth } = useCalendar();
   const [showSidebars, setShowSidebars] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ export function CalendarPage() {
               monthlyIncome={monthlyIncome}
               loadMonth={loadMonth}
             />
-            <ProgressLegendInline distribution={distribution} totalDays={events.length} />
+            <ProgressLegendInline distribution={distribution} totalDays={events.length} currentDate={currentDate} />
           </div>
 
           {/* Right sidebar */}
