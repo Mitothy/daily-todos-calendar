@@ -317,10 +317,13 @@ export async function getMonthEvents(
   await Promise.all(cachedPromises);
 
   // Also do the list query to catch any events not in our cache
-  // Use explicit UTC dates to avoid timezone issues
-  const startDateStr = `${year}-${String(month).padStart(2, '0')}-01T00:00:00Z`;
+  // Pad the query window by one day on each side to handle timezone edge cases
+  // (all-day events may span different UTC times depending on calendar timezone)
+  const firstDay = `${year}-${String(month).padStart(2, '0')}-01`;
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const endDateStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}T23:59:59Z`;
+  const lastDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  const startDateStr = `${getPrevDay(firstDay)}T00:00:00Z`;
+  const endDateStr = `${getNextDay(lastDayStr)}T23:59:59Z`;
 
   const response = await calendar.events.list({
     calendarId: 'primary',
@@ -333,18 +336,21 @@ export async function getMonthEvents(
 
   // Merge: cached events take priority (they're more up-to-date)
   const eventsByDate = new Map<string, any>();
+  const monthPrefix = `${year}-${String(month).padStart(2, '0')}-`;
 
-  // Add list results first
+  // Add list results first (only if they belong to this month)
   for (const event of (response.data.items || [])) {
     const date = event.start?.date || '';
-    if (date && !cachedEvents.has(date)) {
+    if (date && date.startsWith(monthPrefix) && !cachedEvents.has(date)) {
       eventsByDate.set(date, event);
     }
   }
 
-  // Then overlay cached events (overwrite list results)
+  // Then overlay cached events (overwrite list results, still filter by month)
   for (const [date, event] of cachedEvents) {
-    eventsByDate.set(date, event);
+    if (date.startsWith(monthPrefix)) {
+      eventsByDate.set(date, event);
+    }
   }
 
   const dates = Array.from(eventsByDate.values()).map((event: any) => {
