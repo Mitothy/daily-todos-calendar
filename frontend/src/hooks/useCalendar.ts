@@ -17,9 +17,11 @@ export function useCalendar() {
   const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [distribution, setDistribution] = useState<Record<number, number>>({});
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   const loadMonth = useCallback(async (date: Date) => {
     setLoading(true);
+    setCurrentDate(date);
     try {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
@@ -84,5 +86,5 @@ export function useCalendar() {
     }
   }, []);
 
-  return { events, loading, monthlyTotal, monthlyIncome, distribution, loadMonth };
+  return { events, loading, monthlyTotal, monthlyIncome, distribution, currentDate, loadMonth };
 }
