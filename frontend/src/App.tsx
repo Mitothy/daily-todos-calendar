@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { KanbanPage } from './pages/KanbanPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export default function App() {
@@ -20,6 +21,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/kanban"
+                element={
+                  <ProtectedRoute>
+                    <KanbanPage />
                   </ProtectedRoute>
                 }
               />

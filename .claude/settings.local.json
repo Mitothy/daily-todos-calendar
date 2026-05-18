@@ -17,7 +17,8 @@
       "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :5002 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
       "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :3003 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
       "Bash(cmd //c \"taskkill /IM node.exe /F\")",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(npx tsc *)"
     ]
   }
 }
