@@ -1,4 +1,3 @@
-import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogoutButton } from '../Auth/LogoutButton';
 import { ThemeToggle } from './ThemeToggle';
@@ -17,31 +16,6 @@ export function Header() {
           </div>
           <h1 className="text-lg font-semibold text-gray-800 dark:text-white tracking-tight">Daily Tasks</h1>
         </div>
-
-        {/* Nav links */}
-        <nav className="hidden sm:flex items-center gap-1 text-sm font-medium">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              `px-3 py-1.5 rounded-lg transition-colors ${isActive
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'}`
-            }
-          >
-            Calendar
-          </NavLink>
-          <NavLink
-            to="/kanban"
-            className={({ isActive }) =>
-              `px-3 py-1.5 rounded-lg transition-colors ${isActive
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-800'}`
-            }
-          >
-            Board
-          </NavLink>
-        </nav>
         <div className="flex items-center gap-3">
           {user && (
             <div className="flex items-center gap-2">

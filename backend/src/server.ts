@@ -12,7 +12,6 @@ import { createSessionConfig } from './config/session.js';
 import authRoutes from './routes/auth.routes.js';
 import tasksRoutes from './routes/tasks.routes.js';
 import calendarRoutes from './routes/calendar.routes.js';
-import kanbanRoutes from './routes/kanban.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -38,7 +37,6 @@ app.use(createSessionConfig());
 app.use('/auth', authRoutes);
 app.use('/tasks', tasksRoutes);
 app.use('/calendar', calendarRoutes);
-app.use('/kanban', kanbanRoutes);
 
 // Health check
 app.get('/health', (_req, res) => {
