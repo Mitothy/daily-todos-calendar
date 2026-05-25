@@ -17,6 +17,11 @@ import { errorHandler } from './middleware/errorHandler.js';
 const app = express();
 const PORT = process.env.PORT || 5002;
 
+// Trust proxy for Render (required for secure cookies behind reverse proxy)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for API-only backend

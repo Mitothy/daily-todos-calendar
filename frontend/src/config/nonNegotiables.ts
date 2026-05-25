@@ -4,6 +4,8 @@
  */
 export const PRINCIPLES: string[] = [
   'Treat others the way you want to be treated',
+  'Pressure is Privilege',
+  'Train like you\'ve never won, compete like you\'ve never lost',
   'Stay true to your word,  don\'t make promises you cant keep',
   'Be just, practice kindness and gratitude, and walk humbly with God.',
   'Leave things better than you found them',
