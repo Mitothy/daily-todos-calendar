@@ -13,11 +13,10 @@ interface CalendarViewProps {
   events: CalendarEvent[];
   loading: boolean;
   monthlyTotal: number;
-  monthlyIncome: number;
   loadMonth: (date: Date) => Promise<void>;
 }
 
-function createToolbar(monthlyTotal: number, monthlyIncome: number) {
+function createToolbar(monthlyTotal: number) {
   return function CustomToolbar({ label, onNavigate }: ToolbarProps<CalendarEvent, object>) {
     return (
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-1 sm:px-2 py-2 sm:py-3 mb-1 sm:mb-2 gap-2 sm:gap-0">
@@ -51,15 +50,9 @@ function createToolbar(monthlyTotal: number, monthlyIncome: number) {
           </button>
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <span className="text-xs sm:text-sm text-red-500 dark:text-red-400">Spent:</span>
-              <span className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">{'\u20B1'}{monthlyTotal.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <span className="text-xs sm:text-sm text-green-500 dark:text-green-400">Income:</span>
-              <span className="text-xs sm:text-sm font-semibold text-green-600 dark:text-green-400">{'\u20B1'}{monthlyIncome.toFixed(2)}</span>
-            </div>
+          <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 bg-red-50 dark:bg-red-900/20 rounded-lg">
+            <span className="text-xs sm:text-sm text-red-500 dark:text-red-400">Spent:</span>
+            <span className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">{'₱'}{monthlyTotal.toFixed(2)}</span>
           </div>
           <button
             onClick={() => onNavigate('TODAY')}
@@ -73,11 +66,11 @@ function createToolbar(monthlyTotal: number, monthlyIncome: number) {
   };
 }
 
-export function CalendarView({ events, loading, monthlyTotal, monthlyIncome, loadMonth }: CalendarViewProps) {
+export function CalendarView({ events, loading, monthlyTotal, loadMonth }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const Toolbar = useMemo(() => createToolbar(monthlyTotal, monthlyIncome), [monthlyTotal, monthlyIncome]);
+  const Toolbar = useMemo(() => createToolbar(monthlyTotal), [monthlyTotal]);
 
   useEffect(() => {
     loadMonth(currentDate);

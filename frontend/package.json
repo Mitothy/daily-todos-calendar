@@ -16,6 +16,7 @@
     "react-big-calendar": "^1.8.5",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.0",
+    "recharts": "^3.8.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

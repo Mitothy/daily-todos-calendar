@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Header } from '../components/Layout/Header';
 import { CalendarView } from '../components/Calendar/CalendarView';
 import { ProgressLegendInline } from '../components/Calendar/ProgressLegendInline';
+import { ExpensePieChart } from '../components/Expenses/ExpensePieChart';
 import { Principles } from '../components/Sidebar/NonNegotiables';
-import { Goals } from '../components/Sidebar/Goals';
 import { BibleVerse } from '../components/Sidebar/BibleVerse';
 import { useCalendar } from '../hooks/useCalendar';
 
 export function CalendarPage() {
-  const { events, loading, monthlyTotal, monthlyIncome, distribution, currentDate, loadMonth } = useCalendar();
+  const { events, loading, monthlyTotal, distribution, categoryTotals, currentDate, loadMonth } = useCalendar();
   const [showSidebars, setShowSidebars] = useState(false);
 
   return (
@@ -16,31 +16,34 @@ export function CalendarPage() {
       <Header />
       <div className="max-w-[1400px] mx-auto px-2 sm:px-4 py-3 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-3 sm:gap-5">
-          {/* Left sidebar - hidden on mobile, toggle-able */}
+          {/* Left sidebar */}
           <div className={`lg:w-64 shrink-0 order-2 lg:order-1 flex flex-col gap-3 sm:gap-4 ${showSidebars ? 'block' : 'hidden lg:flex'}`}>
             <Principles />
           </div>
 
-          {/* Calendar with inline progress legend */}
+          {/* Main calendar area */}
           <div className="flex-1 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm p-2 sm:p-4 min-w-0 order-1 lg:order-2 transition-colors">
             <CalendarView
               events={events}
               loading={loading}
               monthlyTotal={monthlyTotal}
-              monthlyIncome={monthlyIncome}
               loadMonth={loadMonth}
             />
             <ProgressLegendInline distribution={distribution} totalDays={events.length} currentDate={currentDate} />
+            {/* Pie chart visible on mobile only — desktop shows it in right sidebar */}
+            <div className="lg:hidden mt-3">
+              <ExpensePieChart categoryTotals={categoryTotals} />
+            </div>
           </div>
 
           {/* Right sidebar */}
           <div className={`lg:w-52 shrink-0 flex flex-col gap-3 sm:gap-4 order-3 ${showSidebars ? 'block' : 'hidden lg:flex'}`}>
-            <Goals />
             <BibleVerse />
+            <ExpensePieChart categoryTotals={categoryTotals} />
           </div>
         </div>
 
-        {/* Mobile toggle for sidebars */}
+        {/* Mobile sidebar toggle */}
         <button
           onClick={() => setShowSidebars(!showSidebars)}
           className="lg:hidden fixed bottom-4 right-4 w-12 h-12 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-colors z-30"

@@ -1,15 +1,15 @@
 import { Request, Response } from 'express';
 import { createOrUpdateTaskEvent, getTasksForDate, deleteTaskEvent } from '../services/googleCalendarService.js';
-import { createEmptyTasks, toggleTask, validateTasks, validateExpenses, calculateTotalSpent, validateIncomes, calculateTotalIncome } from '../services/taskService.js';
+import { createEmptyTasks, toggleTask, validateTasks, validateExpenses, calculateTotalSpent } from '../services/taskService.js';
 import { getColorId } from '../utils/colorMapper.js';
-import { Task, Expense, Income } from '../types/task.types.js';
+import { Task, Expense } from '../types/task.types.js';
 
 export async function getTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
     console.log(`[getTasks] Loading tasks for date: ${date}`);
     const result = await getTasksForDate(req.auth!, date, req.session.userId!);
-    console.log(`[getTasks] Result for ${date}:`, result ? `found ${result.tasks.length} tasks, ${result.expenses.length} expenses, ${result.incomes.length} incomes` : 'null (no event found)');
+    console.log(`[getTasks] Result for ${date}:`, result ? `found ${result.tasks.length} tasks, ${result.expenses.length} expenses` : 'null (no event found)');
     res.json(result);
   } catch (error: any) {
     console.error('Get tasks error:', error.message);
@@ -20,7 +20,7 @@ export async function getTasks(req: Request, res: Response) {
 export async function createTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
-    let { tasks, expenses, incomes } = req.body as { tasks: Task[]; expenses?: Expense[]; incomes?: Income[] };
+    let { tasks, expenses } = req.body as { tasks: Task[]; expenses?: Expense[] };
     console.log(`[createTasks] Creating tasks for date: ${date}, incoming tasks: ${tasks?.length || 0}`);
 
     if (!tasks || tasks.length === 0) {
@@ -28,7 +28,6 @@ export async function createTasks(req: Request, res: Response) {
       console.log(`[createTasks] Generated 6 empty tasks`);
     }
     if (!expenses) expenses = [];
-    if (!incomes) incomes = [];
 
     const validationError = validateTasks(tasks);
     if (validationError) {
@@ -40,12 +39,7 @@ export async function createTasks(req: Request, res: Response) {
       return res.status(400).json({ error: expenseError });
     }
 
-    const incomeError = validateIncomes(incomes);
-    if (incomeError) {
-      return res.status(400).json({ error: incomeError });
-    }
-
-    const eventId = await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses, incomes);
+    const eventId = await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses);
     const completedCount = tasks.filter((t) => t.completed).length;
 
     res.status(201).json({
@@ -55,8 +49,6 @@ export async function createTasks(req: Request, res: Response) {
       colorId: getColorId(completedCount),
       expenses,
       totalSpent: calculateTotalSpent(expenses),
-      incomes,
-      totalIncome: calculateTotalIncome(incomes),
     });
   } catch (error: any) {
     console.error('Create tasks error:', error.message);
@@ -79,7 +71,7 @@ export async function toggleTaskCompletion(req: Request, res: Response) {
     }
 
     existing.tasks[taskIndex] = toggleTask(existing.tasks[taskIndex]);
-    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses, existing.incomes);
+    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses);
 
     const completedCount = existing.tasks.filter((t) => t.completed).length;
 
@@ -114,7 +106,7 @@ export async function updateTaskTitle(req: Request, res: Response) {
     }
 
     existing.tasks[taskIndex].title = title;
-    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses, existing.incomes);
+    await createOrUpdateTaskEvent(req.auth!, date, existing.tasks, req.session.userId!, existing.expenses);
 
     res.json({ task: existing.tasks[taskIndex] });
   } catch (error: any) {
@@ -126,7 +118,7 @@ export async function updateTaskTitle(req: Request, res: Response) {
 export async function bulkUpdateTasks(req: Request, res: Response) {
   try {
     const { date } = req.params;
-    const { tasks, expenses = [], incomes = [] } = req.body as { tasks: Task[]; expenses?: Expense[]; incomes?: Income[] };
+    const { tasks, expenses = [] } = req.body as { tasks: Task[]; expenses?: Expense[] };
 
     const validationError = validateTasks(tasks);
     if (validationError) {
@@ -138,12 +130,7 @@ export async function bulkUpdateTasks(req: Request, res: Response) {
       return res.status(400).json({ error: expenseError });
     }
 
-    const incomeError = validateIncomes(incomes);
-    if (incomeError) {
-      return res.status(400).json({ error: incomeError });
-    }
-
-    await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses, incomes);
+    await createOrUpdateTaskEvent(req.auth!, date, tasks, req.session.userId!, expenses);
     const completedCount = tasks.filter((t) => t.completed).length;
 
     res.json({
@@ -152,8 +139,6 @@ export async function bulkUpdateTasks(req: Request, res: Response) {
       colorId: getColorId(completedCount),
       expenses,
       totalSpent: calculateTotalSpent(expenses),
-      incomes,
-      totalIncome: calculateTotalIncome(incomes),
     });
   } catch (error: any) {
     console.error('Bulk update error:', error.message);

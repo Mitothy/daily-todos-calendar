@@ -2,11 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useTasks } from '../../hooks/useTasks';
 import { TaskList } from './TaskList';
 import { ExpenseList } from '../Expenses/ExpenseList';
-import { IncomeList } from '../Income/IncomeList';
 import { ErrorMessage } from '../Common/ErrorMessage';
 import { formatDisplayDate } from '../../utils/dateHelpers';
 import { HEX_COLORS } from '../../utils/colorMap';
-import { Task, Expense, Income, createDefaultTasks } from '../../types/task.types';
+import { Task, Expense, createDefaultTasks } from '../../types/task.types';
 
 interface TaskPanelProps {
   date: Date;
@@ -18,7 +17,6 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   const { loadTasks, saveTasks, createTasks, deleteTasks, error } = useTasks();
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const [localExpenses, setLocalExpenses] = useState<Expense[]>([]);
-  const [localIncomes, setLocalIncomes] = useState<Income[]>([]);
   const [saving, setSaving] = useState(false);
   const [panelLoading, setPanelLoading] = useState(true);
   const [isNewDay, setIsNewDay] = useState(false);
@@ -36,12 +34,10 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
       if (result && result.tasks.length > 0) {
         setLocalTasks(result.tasks);
         setLocalExpenses(result.expenses || []);
-        setLocalIncomes(result.incomes || []);
         setIsNewDay(false);
       } else {
         setLocalTasks(createDefaultTasks());
         setLocalExpenses([]);
-        setLocalIncomes([]);
         setIsNewDay(true);
       }
       setPanelLoading(false);
@@ -84,7 +80,7 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
   const handleAddExpense = useCallback(() => {
     setLocalExpenses((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), description: '', amount: 0 },
+      { id: crypto.randomUUID(), description: '', amount: 0, category: '' },
     ]);
   }, []);
 
@@ -104,26 +100,9 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
     );
   }, []);
 
-  const handleAddIncome = useCallback(() => {
-    setLocalIncomes((prev) => [
-      ...prev,
-      { id: crypto.randomUUID(), description: '', amount: 0 },
-    ]);
-  }, []);
-
-  const handleDeleteIncome = useCallback((id: string) => {
-    setLocalIncomes((prev) => prev.filter((i) => i.id !== id));
-  }, []);
-
-  const handleIncomeDescriptionChange = useCallback((id: string, description: string) => {
-    setLocalIncomes((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, description } : i))
-    );
-  }, []);
-
-  const handleIncomeAmountChange = useCallback((id: string, amount: number) => {
-    setLocalIncomes((prev) =>
-      prev.map((i) => (i.id === id ? { ...i, amount } : i))
+  const handleExpenseCategoryChange = useCallback((id: string, category: string) => {
+    setLocalExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, category } : e))
     );
   }, []);
 
@@ -132,21 +111,18 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
     const cleanedExpenses = localExpenses
       .filter((e) => e.description.trim() || e.amount > 0)
       .map((e) => ({ ...e, amount: Math.round(e.amount * 100) / 100 }));
-    const cleanedIncomes = localIncomes
-      .filter((i) => i.description.trim() || i.amount > 0)
-      .map((i) => ({ ...i, amount: Math.round(i.amount * 100) / 100 }));
 
     if (isNewDay) {
-      await createTasks(date, localTasks, cleanedExpenses, cleanedIncomes);
+      await createTasks(date, localTasks, cleanedExpenses);
     } else {
-      await saveTasks(date, localTasks, cleanedExpenses, cleanedIncomes);
+      await saveTasks(date, localTasks, cleanedExpenses);
     }
     setSaving(false);
     onClose();
   };
 
   const handleDelete = async () => {
-    if (!confirm('Delete this day\'s tasks, expenses, and income?')) return;
+    if (!confirm('Delete this day\'s tasks and expenses?')) return;
     setSaving(true);
     await deleteTasks(date);
     setSaving(false);
@@ -211,15 +187,9 @@ export function TaskPanel({ date, isOpen, onClose }: TaskPanelProps) {
                 expenses={localExpenses}
                 onDescriptionChange={handleExpenseDescriptionChange}
                 onAmountChange={handleExpenseAmountChange}
+                onCategoryChange={handleExpenseCategoryChange}
                 onDelete={handleDeleteExpense}
                 onAdd={handleAddExpense}
-              />
-              <IncomeList
-                incomes={localIncomes}
-                onDescriptionChange={handleIncomeDescriptionChange}
-                onAmountChange={handleIncomeAmountChange}
-                onDelete={handleDeleteIncome}
-                onAdd={handleAddIncome}
               />
             </>
           )}

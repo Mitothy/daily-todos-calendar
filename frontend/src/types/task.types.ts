@@ -6,16 +6,19 @@ export interface Task {
   notes: string;
 }
 
+export const EXPENSE_CATEGORIES = [
+  'Social',
+  'Personal',
+  'Food & Beverage',
+  'Shopping',
+  'Hannah',
+] as const;
+
 export interface Expense {
   id: string;
   description: string;
   amount: number;
-}
-
-export interface Income {
-  id: string;
-  description: string;
-  amount: number;
+  category?: string;
 }
 
 export interface TasksData {
@@ -32,15 +35,13 @@ export interface DailyTaskEvent {
   eventId: string;
   expenses: Expense[];
   totalSpent: number;
-  incomes: Income[];
-  totalIncome: number;
 }
 
 export const DEFAULT_TASK_TITLES = [
   'Daily Supplements',
   'Skincare and Brush Twice',
   'Notebook',
-  'Stretching',
+  'Productive outside Work',
   'Exercise',
   'Read or Mental Exercise',
 ];

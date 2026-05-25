@@ -5,11 +5,12 @@ interface ExpenseListProps {
   expenses: Expense[];
   onDescriptionChange: (id: string, description: string) => void;
   onAmountChange: (id: string, amount: number) => void;
+  onCategoryChange: (id: string, category: string) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
 }
 
-export function ExpenseList({ expenses, onDescriptionChange, onAmountChange, onDelete, onAdd }: ExpenseListProps) {
+export function ExpenseList({ expenses, onDescriptionChange, onAmountChange, onCategoryChange, onDelete, onAdd }: ExpenseListProps) {
   const total = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   return (
@@ -33,6 +34,7 @@ export function ExpenseList({ expenses, onDescriptionChange, onAmountChange, onD
             expense={expense}
             onDescriptionChange={onDescriptionChange}
             onAmountChange={onAmountChange}
+            onCategoryChange={onCategoryChange}
             onDelete={onDelete}
           />
         ))}

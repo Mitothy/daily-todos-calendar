@@ -17,8 +17,9 @@ export async function googleAuth(req: Request, res: Response) {
     const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
     const userInfo = await oauth2.userinfo.get();
 
-    // Store refresh token in session
-    req.session.refreshToken = tokens.refresh_token || undefined;
+    // Store tokens in session (refresh_token only returned on first auth; access_token always returned)
+    if (tokens.refresh_token) req.session.refreshToken = tokens.refresh_token;
+    req.session.accessToken = tokens.access_token || undefined;
     req.session.user = {
       email: userInfo.data.email || '',
       name: userInfo.data.name || '',

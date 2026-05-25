@@ -15,8 +15,8 @@ export function useCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
-  const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [distribution, setDistribution] = useState<Record<number, number>>({});
+  const [categoryTotals, setCategoryTotals] = useState<Record<string, number>>({});
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   const loadMonth = useCallback(async (date: Date) => {
@@ -27,39 +27,27 @@ export function useCalendar() {
       const month = date.getMonth() + 1;
       const response = await api.get<MonthData>(`/calendar/month/${year}/${month}`);
 
-      // Build a map of dates that have backend events
       const backendDates = new Map<string, typeof response.data.dates[0]>();
       let totalExpenses = 0;
-      let totalIncome = 0;
       for (const d of response.data.dates) {
         backendDates.set(d.date, d);
         totalExpenses += d.totalSpent || 0;
-        totalIncome += d.totalIncome || 0;
       }
       setMonthlyTotal(Math.round(totalExpenses * 100) / 100);
-      setMonthlyIncome(Math.round(totalIncome * 100) / 100);
+      setCategoryTotals(response.data.categoryTotals || {});
 
-      // Calculate distribution of completion counts
       const dist: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
-      // Generate events for ALL days in the month
       const allDays = getDaysInMonth(year, month);
       const calendarEvents: CalendarEvent[] = allDays.map((dayStr) => {
         const backendData = backendDates.get(dayStr);
         const completedCount = backendData?.completedCount ?? 0;
         const totalSpent = backendData?.totalSpent ?? 0;
-        const dayIncome = backendData?.totalIncome ?? 0;
 
         dist[completedCount] = (dist[completedCount] || 0) + 1;
 
-        // Build title with expenses and income if they exist
         let title = `${completedCount}/6`;
-        if (totalSpent > 0 || dayIncome > 0) {
-          const parts = [title];
-          if (totalSpent > 0) parts.push(`-\u20B1${totalSpent.toFixed(2)}`);
-          if (dayIncome > 0) parts.push(`+\u20B1${dayIncome.toFixed(2)}`);
-          title = parts.join(' | ');
-        }
+        if (totalSpent > 0) title += ` | -₱${totalSpent.toFixed(2)}`;
 
         return {
           title,
@@ -72,7 +60,6 @@ export function useCalendar() {
             colorId: backendData?.colorId ?? '',
             eventId: backendData?.eventId ?? '',
             totalSpent,
-            totalIncome: dayIncome,
           },
         };
       });
@@ -86,5 +73,5 @@ export function useCalendar() {
     }
   }, []);
 
-  return { events, loading, monthlyTotal, monthlyIncome, distribution, currentDate, loadMonth };
+  return { events, loading, monthlyTotal, distribution, categoryTotals, currentDate, loadMonth };
 }

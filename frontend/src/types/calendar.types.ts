@@ -9,18 +9,17 @@ export interface CalendarEvent {
     colorId: string;
     eventId: string;
     totalSpent: number;
-    totalIncome: number;
   };
 }
 
 export interface MonthData {
   month: string;
+  categoryTotals: Record<string, number>;
   dates: Array<{
     date: string;
     completedCount: number;
     colorId: string;
     eventId: string;
     totalSpent: number;
-    totalIncome: number;
   }>;
 }

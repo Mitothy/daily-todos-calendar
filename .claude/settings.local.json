@@ -17,7 +17,13 @@
       "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :5002 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
       "Bash(cmd //c \"for /f \"\"tokens=5\"\" %a in \\(''netstat -ano ^| findstr :3003 ^| findstr LISTENING''\\) do taskkill /PID %a /F\")",
       "Bash(cmd //c \"taskkill /IM node.exe /F\")",
-      "Bash(timeout /t 3 /nobreak)"
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(xargs grep *)",
+      "Bash(grep -r \"category\" /c/Users/timot/OneDrive/Documents/GitHub/daily-todos-calendar --include=\"*.ts\" --include=\"*.tsx\" ! -path \"*/node_modules/*\")",
+      "PowerShell(Stop-Process -Id 21556 -Force)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); uid=list\\(d.keys\\(\\)\\)[0]; dates=sorted\\(d[uid].keys\\(\\)\\); print\\(f'User: {uid}'\\); print\\(f'Total days: {len\\(dates\\)}'\\); print\\('Dates:', ', '.join\\(dates\\)\\)\")",
+      "Bash(node -e \"const d=require\\('./backend/.event-cache.json'\\); const uid=Object.keys\\(d\\)[0]; const dates=Object.keys\\(d[uid]\\).sort\\(\\); console.log\\('User:', uid\\); console.log\\('Days with data:', dates.length\\); console.log\\(dates.join\\('\\\\n'\\)\\);\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const d=JSON.parse\\(fs.readFileSync\\('backend/.event-cache.json','utf8'\\)\\); const uid=Object.keys\\(d\\)[0]; const dates=Object.keys\\(d[uid]\\).sort\\(\\); console.log\\('Days with data:', dates.length\\); console.log\\(dates.join\\('\\\\n'\\)\\);\")"
     ]
   }
 }

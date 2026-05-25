@@ -24,7 +24,7 @@ if (process.env.NODE_ENV === 'production') {
 
 // Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for API-only backend
+  contentSecurityPolicy: false,
 }));
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3001',

@@ -10,12 +10,7 @@ export interface Expense {
   id: string;
   description: string;
   amount: number;
-}
-
-export interface Income {
-  id: string;
-  description: string;
-  amount: number;
+  category?: string;
 }
 
 export interface TasksData {
@@ -30,12 +25,6 @@ export interface ExpensesData {
   lastUpdated: string;
 }
 
-export interface IncomeData {
-  incomes: Income[];
-  totalIncome: number;
-  lastUpdated: string;
-}
-
 export interface DailyTaskEvent {
   date: string;
   tasks: Task[];
@@ -44,6 +33,4 @@ export interface DailyTaskEvent {
   eventId: string;
   expenses: Expense[];
   totalSpent: number;
-  incomes: Income[];
-  totalIncome: number;
 }
