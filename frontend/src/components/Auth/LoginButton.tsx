@@ -13,8 +13,6 @@ export function LoginButton() {
     },
     flow: 'auth-code',
     scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-    access_type: 'offline',
-    prompt: 'consent',
   });
 
   return (

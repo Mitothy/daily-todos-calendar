@@ -82,9 +82,9 @@ export function ExpensePieChart({ categoryTotals }: ExpensePieChartProps) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number, name: string) => [
-              `₱${value.toFixed(2)}  (${((value / total) * 100).toFixed(1)}%)`,
-              name,
+            formatter={(value, name) => [
+              `₱${(value as number).toFixed(2)}  (${(((value as number) / total) * 100).toFixed(1)}%)`,
+              name as string,
             ]}
             contentStyle={tooltipStyle}
           />
