@@ -20,6 +20,7 @@
   }
 }
 
+
 .rbc-month-view {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -111,9 +112,8 @@
   then make the event row stretch to fill remaining space after headers.
 */
 
-/* Month row: ensure enough height, allow overflow for our custom content */
+/* Month row: allow overflow for our custom content */
 .rbc-month-view .rbc-month-row {
-  min-height: 100px;
   overflow: visible !important;
 }
 
@@ -318,11 +318,6 @@
 
 /* === Mobile-specific styles === */
 @media (max-width: 640px) {
-  /* Smaller month row height on mobile */
-  .rbc-month-view .rbc-month-row {
-    min-height: 65px;
-  }
-
   /* Compact header padding */
   .rbc-header {
     padding: 6px 0;
@@ -382,10 +377,6 @@
 
 /* Extra small screens (phones in portrait) */
 @media (max-width: 380px) {
-  .rbc-month-view .rbc-month-row {
-    min-height: 55px;
-  }
-
   .rbc-header {
     font-size: 9px;
     padding: 4px 0;
