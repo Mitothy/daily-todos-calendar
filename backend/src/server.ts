@@ -33,6 +33,12 @@ app.use(cors({
 app.use(express.json());
 app.use(createSessionConfig());
 
+// Serve frontend static files in production (same-origin avoids iOS Safari ITP cookie blocking)
+const frontendDist = path.resolve(__dirname, '../../frontend/dist');
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(frontendDist));
+}
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/tasks', tasksRoutes);
@@ -42,6 +48,13 @@ app.use('/calendar', calendarRoutes);
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+// SPA fallback — must be after API routes, before error handler
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+  });
+}
 
 // Error handler
 app.use(errorHandler);
